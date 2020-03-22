@@ -47,6 +47,7 @@ namespace Framework
 #ifdef WIN
 	namespace Utilities
 	{
+		void ZeroMem(void* src, size_t size);
 		unsigned int FileToArrayOfBytes(std::string filepath, char*& pbuffer);
 		void MultiByteToWideChar(char mbstr[], wchar_t wcbuf[], size_t max_size);
 		void WideCharToMultiByte(wchar_t wcstr[], char mbbuf[], size_t max_size);
@@ -56,6 +57,8 @@ namespace Framework
 	{
 		namespace Memory
 		{
+			bool IsBadPointer(void* pointer);
+
 			namespace Ex
 			{
 				pid_t GetPID(LPCWSTR processName);
@@ -74,15 +77,17 @@ namespace Framework
 				mem_t GetPointer(mem_t baseAddress, std::vector<mem_t> offsets);
 				bool WriteBuffer(mem_t address, const void* value, SIZE_T size);
 				bool ReadBuffer(mem_t address, void* buffer, SIZE_T size);
-				template <class type>
-				type Read(mem_t address)
+				template <class type_t>
+				type_t Read(mem_t address)
 				{
-					return *(type*)(address);
+					if (IsBadPointer((void*)address)) return (type_t)BAD_RETURN;
+					return *(type_t*)(address);
 				}
-				template <class type>
-				void Write(mem_t address, type value)
+				template <class type_t>
+				void Write(mem_t address, type_t value)
 				{
-					*(type*)(address) = value;
+					if (IsBadPointer((void*)address)) return (type_t)BAD_RETURN;
+					*(type_t*)(address) = value;
 				}
 			}
 		}
@@ -93,6 +98,8 @@ namespace Framework
 	{
 		namespace Memory
 		{
+			bool IsBadPointer(void* pointer);
+
 			namespace Ex
 			{
 				pid_t GetProcessID(std::string processName);

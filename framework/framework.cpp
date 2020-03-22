@@ -4,13 +4,19 @@ namespace Framework
 {
 	namespace Utilities
 	{
+		void ZeroMem(void* src, size_t size)
+		{
+			memset(src, 0x0, size + 1);
+		}
+		/*-----------------------------------------------------------*/
 		unsigned int FileToArrayOfBytes(std::string filepath, char*& pbuffer)
 		{
 			std::ifstream filestream(filepath, std::ios::binary | std::ios::ate);
 			if (filestream.fail()) return BAD_RETURN;
 
 			unsigned int size = filestream.tellg();
-			pbuffer = new char(size);
+			pbuffer = new char(size+1);
+			ZeroMem(pbuffer, size + 1);
 			filestream.seekg(0, std::ios::beg);
 			filestream.read((char*)pbuffer, size);
 			filestream.close();
@@ -33,6 +39,19 @@ namespace Framework
 	{
 		namespace Memory
 		{
+			bool IsBadPointer(void* pointer)
+			{
+				MEMORY_BASIC_INFORMATION mbi = { 0 };
+				if (VirtualQuery(pointer, &mbi, sizeof(mbi)))
+				{
+					DWORD mask = (PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY);
+					bool b = !(mbi.Protect & mask);
+					if (mbi.Protect & (PAGE_GUARD | PAGE_NOACCESS)) b = true;
+
+					return b;
+				}
+				return true;
+			}
 			namespace Ex
 			{
 				pid_t GetPID(LPCWSTR processName)
@@ -169,6 +188,20 @@ namespace Framework
 	{
 		namespace Memory
 		{
+			bool IsBadPointer(void* pointer)
+			{
+				int fh = open(p, 0, 0);
+				int e = errno;
+
+				if (fh == -1 && e != EFAULT)
+				{
+					close(fh);
+					return false;
+				}
+
+				return true;
+			}
+
 			namespace Ex
 			{
 				pid_t GetProcessID(std::string processName)
