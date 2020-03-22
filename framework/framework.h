@@ -7,6 +7,8 @@
 
 #include <iostream>
 #include <fstream>
+#include <unordered_map>
+#include <functional>
 
 #ifdef WIN
 //define _CRT_SECURE_NO_WARNINGS
@@ -14,6 +16,7 @@
 #include <vector>
 #include <Windows.h>
 #include <TlHelp32.h>
+
 typedef DWORD pid_t;
 typedef uintptr_t mem_t;
 #endif
@@ -35,11 +38,13 @@ typedef uintptr_t mem_t;
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
-typedef mem_t mem_t;
 #define INVALID_PID -1
 #define MAX_FILENAME 256
+
+typedef mem_t mem_t;
 #endif
 
+#define BAD_FUNCTION 0
 #define BAD_RETURN -1
 
 namespace Framework
@@ -47,6 +52,35 @@ namespace Framework
 #ifdef WIN
 	namespace Utilities
 	{
+		namespace FunctionManager
+		{
+			template <class type_t>
+			static std::unordered_map<std::string, std::function<type_t()>> function_arr;
+			template <class type_t>
+			bool Register(std::string strName, std::function<type_t()> func, bool overwrite = true)
+			{
+				if (!overwrite && function_arr<type_t>.count(strName) > 0) return false;
+				function_arr<type_t>.insert(std::pair<std::string, std::function<type_t()>>(strName, func));
+				return true;
+			}
+			template <class type_t>
+			type_t Call(std::string strName)
+			{
+				if (function_arr<type_t>.count(strName) == 0 || function_arr<type_t>[strName] == BAD_FUNCTION) return (type_t)BAD_RETURN;
+
+				try
+				{
+					type_t ret = (type_t)function_arr<type_t>[strName]();
+					return ret;
+				}
+
+				catch (const std::exception & e)
+				{
+					function_arr<type_t>[strName] = BAD_FUNCTION;
+					return (type_t)BAD_RETURN;
+				}
+			}
+		}
 		void ZeroMem(void* src, size_t size);
 		unsigned int FileToArrayOfBytes(std::string filepath, char*& pbuffer);
 		void MultiByteToWideChar(char mbstr[], wchar_t wcbuf[], size_t max_size);
