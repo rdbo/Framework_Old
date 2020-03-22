@@ -1,4 +1,5 @@
 #pragma once
+
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 #define WIN
 #elif defined linux
@@ -41,15 +42,14 @@ typedef uintptr_t mem_t;
 #define INVALID_PID -1
 #define MAX_FILENAME 256
 
-typedef mem_t mem_t;
+typedef off_t mem_t;
 #endif
 
 #define BAD_FUNCTION 0
-#define BAD_RETURN -1
+#define BAD_RETURN 0
 
 namespace Framework
 {
-#ifdef WIN
 	namespace Utilities
 	{
 		namespace FunctionManager
@@ -86,7 +86,7 @@ namespace Framework
 		void MultiByteToWideChar(char mbstr[], wchar_t wcbuf[], size_t max_size);
 		void WideCharToMultiByte(wchar_t wcstr[], char mbbuf[], size_t max_size);
 	}
-
+#ifdef WIN
 	namespace Windows
 	{
 		namespace Memory
@@ -127,6 +127,7 @@ namespace Framework
 		}
 	}
 #endif
+
 #ifdef LINUX
 	namespace Linux
 	{
@@ -144,7 +145,7 @@ namespace Framework
 
 			namespace In
 			{
-				pid_t GetProcessID();
+				pid_t GetCurrentProcessID();
 				bool ReadBuffer(mem_t address, void* buffer, size_t size);
 				bool WriteBuffer(mem_t address, void* value, size_t size);
 			}

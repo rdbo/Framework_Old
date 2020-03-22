@@ -15,8 +15,8 @@ namespace Framework
 			if (filestream.fail()) return BAD_RETURN;
 
 			unsigned int size = filestream.tellg();
-			pbuffer = new char(size+1);
-			ZeroMem(pbuffer, size + 1);
+			pbuffer = new char(size);
+			ZeroMem(pbuffer, size);
 			filestream.seekg(0, std::ios::beg);
 			filestream.read((char*)pbuffer, size);
 			filestream.close();
@@ -190,7 +190,7 @@ namespace Framework
 		{
 			bool IsBadPointer(void* pointer)
 			{
-				int fh = open(p, 0, 0);
+				int fh = open((const char*)pointer, 0, 0);
 				int e = errno;
 
 				if (fh == -1 && e != EFAULT)
@@ -238,7 +238,7 @@ namespace Framework
 					return pid;
 				}
 				/*-----------------------------------------------------------*/
-				void ReadBuffer(pid_t pid, off_t address, void* buffer, size_t size)
+				void ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size)
 				{
 					char file[MAX_FILENAME];
 					sprintf(file, "/proc/%ld/mem", (long)pid);
@@ -250,7 +250,7 @@ namespace Framework
 					close(fd);
 				}
 				/*-----------------------------------------------------------*/
-				void WriteBuffer(pid_t pid, off_t address, void* value, size_t size)
+				void WriteBuffer(pid_t pid, mem_t address, void* value, size_t size)
 				{
 					char file[MAX_FILENAME];
 					sprintf(file, "/proc/%ld/mem", (long)pid);
@@ -274,20 +274,20 @@ namespace Framework
 
 			namespace In
 			{
-				pid_t GetProcessID()
+				pid_t GetCurrentProcessID()
 				{
 					pid_t pid = getpid();
 					if (pid <= 0) pid = INVALID_PID;
 					return pid;
 				}
 				/*-----------------------------------------------------------*/
-				bool ReadBuffer(off_t address, void* buffer, size_t size)
+				bool ReadBuffer(mem_t address, void* buffer, size_t size)
 				{
 					memcpy((void*)buffer, (void*)address, size);
 					return true;
 				}
 				/*-----------------------------------------------------------*/
-				bool WriteBuffer(off_t address, void* value, size_t size)
+				bool WriteBuffer(mem_t address, void* value, size_t size)
 				{
 					memcpy((void*)address, (void*)value, size);
 					return true;
