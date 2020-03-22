@@ -19,7 +19,25 @@ typedef uintptr_t mem_t;
 #endif
 
 #ifdef LINUX
-typedef off_t mem_t;
+#include <sys/types.h>
+#include <dirent.h>
+#include <errno.h>
+#include <vector>
+#include <string>
+#include <string.h>
+#include <iostream>
+#include <fstream>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/ptrace.h>
+#include <sys/wait.h>
+#include <sys/mman.h>
+typedef mem_t mem_t;
+#define INVALID_PID -1
+#define MAX_FILENAME 256
 #endif
 
 #define BAD_RETURN -1
@@ -29,7 +47,7 @@ namespace Framework
 #ifdef WIN
 	namespace Utilities
 	{
-		unsigned int FileToArrayOfBytes(std::string filepath, char** pbuffer);
+		unsigned int FileToArrayOfBytes(std::string filepath, char*& pbuffer);
 		void MultiByteToWideChar(char mbstr[], wchar_t wcbuf[], size_t max_size);
 		void WideCharToMultiByte(wchar_t wcstr[], char mbbuf[], size_t max_size);
 	}
@@ -71,5 +89,25 @@ namespace Framework
 	}
 #endif
 #ifdef LINUX
+	namespace Linux
+	{
+		namespace Memory
+		{
+			namespace Ex
+			{
+				pid_t GetProcessID(std::string processName);
+				void ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
+				void WriteBuffer(pid_t pid, mem_t address, void* value, size_t size);
+				bool IsProcessRunning(pid_t pid);
+			}
+
+			namespace In
+			{
+				pid_t GetProcessID();
+				bool ReadBuffer(mem_t address, void* buffer, size_t size);
+				bool WriteBuffer(mem_t address, void* value, size_t size);
+			}
+		}
+	}
 #endif
 }
