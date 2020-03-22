@@ -1,0 +1,165 @@
+#include "framework.h"
+
+namespace Framework
+{
+	namespace Utilities
+	{
+		unsigned int FileToArrayOfBytes(std::string filepath, char** pbuffer)
+		{
+			std::ifstream filestream(filepath, std::ios::binary | std::ios::ate);
+			if (filestream.fail()) return BAD_RETURN;
+
+			unsigned int size = filestream.tellg();
+			*pbuffer = new char(size);
+			filestream.seekg(0, std::ios::beg);
+			filestream.read((char*)*pbuffer, size);
+			filestream.close();
+			return size;
+		}
+		/*-----------------------------------------------------------*/
+		void MultiByteToWideChar(char mbstr[], wchar_t wcbuf[], size_t max_size)
+		{
+			mbstowcs(wcbuf, mbstr, max_size);
+		}
+		/*-----------------------------------------------------------*/
+		void WideCharToMultiByte(wchar_t wcstr[], char mbbuf[], size_t max_size)
+		{
+			wcstombs(mbbuf, wcstr, max_size);
+		}
+	}
+#ifdef WIN
+	namespace Windows
+	{
+		namespace Memory
+		{
+			namespace Ex
+			{
+				pid_t GetPID(LPCWSTR processName)
+				{
+					pid_t pid = 0;
+					HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+					if (hSnap != INVALID_HANDLE_VALUE)
+					{
+						PROCESSENTRY32 procEntry;
+						procEntry.dwSize = sizeof(procEntry);
+
+						if (Process32First(hSnap, &procEntry))
+						{
+							do
+							{
+								if (!lstrcmp(procEntry.szExeFile, processName))
+								{
+									pid = procEntry.th32ProcessID;
+									break;
+								}
+							} while (Process32Next(hSnap, &procEntry));
+
+						}
+					}
+					CloseHandle(hSnap);
+					return pid;
+				}
+				/*-----------------------------------------------------------*/
+				mem_t GetModuleAddress(LPCWSTR moduleName, pid_t pid)
+				{
+					mem_t moduleAddr = NULL;
+					HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid);
+					if (hSnap != INVALID_HANDLE_VALUE)
+					{
+						MODULEENTRY32 modEntry;
+						modEntry.dwSize = sizeof(modEntry);
+						if (Module32First(hSnap, &modEntry))
+						{
+							do
+							{
+								if (!lstrcmp(modEntry.szModule, moduleName))
+								{
+									moduleAddr = (mem_t)modEntry.modBaseAddr;
+									break;
+								}
+							} while (Module32Next(hSnap, &modEntry));
+						}
+					}
+					CloseHandle(hSnap);
+					return moduleAddr;
+				}
+				/*-----------------------------------------------------------*/
+				HANDLE GetProcessHandle(pid_t pid)
+				{
+					return OpenProcess(PROCESS_ALL_ACCESS, NULL, pid);
+				}
+				/*-----------------------------------------------------------*/
+				BOOL WriteBuffer(HANDLE hProc, mem_t address, const void* value, SIZE_T size)
+				{
+					return WriteProcessMemory(hProc, (BYTE*)address, value, size, nullptr);
+				}
+				/*-----------------------------------------------------------*/
+				BOOL ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T size)
+				{
+					return ReadProcessMemory(hProc, (BYTE*)address, buffer, size, nullptr);
+				}
+				/*-----------------------------------------------------------*/
+				mem_t GetPointer(HANDLE hProc, mem_t baseAddress, std::vector<mem_t> offsets)
+				{
+					mem_t addr = baseAddress;
+					for (unsigned int i = 0; i < offsets.size(); ++i)
+					{
+						addr += offsets[i];
+						ReadProcessMemory(hProc, (BYTE*)addr, &addr, sizeof(addr), 0);
+					}
+					return addr;
+				}
+				/*-----------------------------------------------------------*/
+			}
+
+			namespace In
+			{
+				HANDLE GetCurrentProcessHandle()
+				{
+					return GetCurrentProcess();
+				}
+				/*-----------------------------------------------------------*/
+				pid_t GetCurrentPID()
+				{
+					return GetCurrentProcessId();
+				}
+				/*-----------------------------------------------------------*/
+				mem_t GetModuleAddress(LPCWSTR moduleName)
+				{
+					return (mem_t)GetModuleHandle(moduleName);
+				}
+				/*-----------------------------------------------------------*/
+				mem_t GetPointer(mem_t baseAddress, std::vector<mem_t> offsets)
+				{
+					mem_t addr = baseAddress;
+					for (unsigned int i = 0; i < offsets.size(); ++i)
+					{
+						addr += offsets[i];
+						addr = *(mem_t*)addr;
+					}
+					return addr;
+				}
+				/*-----------------------------------------------------------*/
+				bool WriteBuffer(mem_t address, const void* value, SIZE_T size)
+				{
+					DWORD oProtection;
+					if (VirtualProtect((LPVOID)address, size, PAGE_EXECUTE_READWRITE, &oProtection))
+					{
+						memcpy((void*)(address), value, size);
+						VirtualProtect((LPVOID)address, size, oProtection, NULL);
+						return true;
+					}
+
+					return false;
+				}
+				/*-----------------------------------------------------------*/
+				bool ReadBuffer(mem_t address, void* buffer, SIZE_T size)
+				{
+					WriteBuffer((mem_t)buffer, (void*)address, size);
+					return false;
+				}
+			}
+		}
+	}
+#endif
+}
