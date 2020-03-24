@@ -35,263 +35,257 @@ namespace Framework
 	}
 
 #ifdef WIN
-	namespace Windows
+	namespace Memory
 	{
-		namespace Memory
+		bool IsBadPointer(void* pointer)
 		{
-			bool IsBadPointer(void* pointer)
+			MEMORY_BASIC_INFORMATION mbi = { 0 };
+			if (VirtualQuery(pointer, &mbi, sizeof(mbi)))
 			{
-				MEMORY_BASIC_INFORMATION mbi = { 0 };
-				if (VirtualQuery(pointer, &mbi, sizeof(mbi)))
-				{
-					DWORD mask = (PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY);
-					bool b = !(mbi.Protect & mask);
-					if (mbi.Protect & (PAGE_GUARD | PAGE_NOACCESS)) b = true;
+				DWORD mask = (PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY);
+				bool b = !(mbi.Protect & mask);
+				if (mbi.Protect & (PAGE_GUARD | PAGE_NOACCESS)) b = true;
 
-					return b;
-				}
-				return true;
+				return b;
 			}
-			namespace Ex
+			return true;
+		}
+		namespace Ex
+		{
+			pid_t GetPID(LPCWSTR processName)
 			{
-				pid_t GetPID(LPCWSTR processName)
+				pid_t pid = 0;
+				HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+				if (hSnap != INVALID_HANDLE_VALUE)
 				{
-					pid_t pid = 0;
-					HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-					if (hSnap != INVALID_HANDLE_VALUE)
-					{
-						PROCESSENTRY32 procEntry;
-						procEntry.dwSize = sizeof(procEntry);
+					PROCESSENTRY32 procEntry;
+					procEntry.dwSize = sizeof(procEntry);
 
-						if (Process32First(hSnap, &procEntry))
+					if (Process32First(hSnap, &procEntry))
+					{
+						do
 						{
-							do
+							if (!lstrcmp(procEntry.szExeFile, processName))
 							{
-								if (!lstrcmp(procEntry.szExeFile, processName))
-								{
-									pid = procEntry.th32ProcessID;
-									break;
-								}
-							} while (Process32Next(hSnap, &procEntry));
+								pid = procEntry.th32ProcessID;
+								break;
+							}
+						} while (Process32Next(hSnap, &procEntry));
 
-						}
 					}
-					CloseHandle(hSnap);
-					return pid;
 				}
-				/*-----------------------------------------------------------*/
-				mem_t GetModuleAddress(LPCWSTR moduleName, pid_t pid)
-				{
-					mem_t moduleAddr = NULL;
-					HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid);
-					if (hSnap != INVALID_HANDLE_VALUE)
-					{
-						MODULEENTRY32 modEntry;
-						modEntry.dwSize = sizeof(modEntry);
-						if (Module32First(hSnap, &modEntry))
-						{
-							do
-							{
-								if (!lstrcmp(modEntry.szModule, moduleName))
-								{
-									moduleAddr = (mem_t)modEntry.modBaseAddr;
-									break;
-								}
-							} while (Module32Next(hSnap, &modEntry));
-						}
-					}
-					CloseHandle(hSnap);
-					return moduleAddr;
-				}
-				/*-----------------------------------------------------------*/
-				HANDLE GetProcessHandle(pid_t pid)
-				{
-					return OpenProcess(PROCESS_ALL_ACCESS, NULL, pid);
-				}
-				/*-----------------------------------------------------------*/
-				BOOL WriteBuffer(HANDLE hProc, mem_t address, const void* value, SIZE_T size)
-				{
-					return WriteProcessMemory(hProc, (BYTE*)address, value, size, nullptr);
-				}
-				/*-----------------------------------------------------------*/
-				BOOL ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T size)
-				{
-					return ReadProcessMemory(hProc, (BYTE*)address, buffer, size, nullptr);
-				}
-				/*-----------------------------------------------------------*/
-				mem_t GetPointer(HANDLE hProc, mem_t baseAddress, std::vector<mem_t> offsets)
-				{
-					mem_t addr = baseAddress;
-					for (unsigned int i = 0; i < offsets.size(); ++i)
-					{
-						addr += offsets[i];
-						ReadProcessMemory(hProc, (BYTE*)addr, &addr, sizeof(addr), 0);
-					}
-					return addr;
-				}
-				/*-----------------------------------------------------------*/
+				CloseHandle(hSnap);
+				return pid;
 			}
-
-			namespace In
+			/*-----------------------------------------------------------*/
+			mem_t GetModuleAddress(LPCWSTR moduleName, pid_t pid)
 			{
-				HANDLE GetCurrentProcessHandle()
+				mem_t moduleAddr = NULL;
+				HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid);
+				if (hSnap != INVALID_HANDLE_VALUE)
 				{
-					return GetCurrentProcess();
-				}
-				/*-----------------------------------------------------------*/
-				pid_t GetCurrentPID()
-				{
-					return GetCurrentProcessId();
-				}
-				/*-----------------------------------------------------------*/
-				mem_t GetModuleAddress(LPCWSTR moduleName)
-				{
-					return (mem_t)GetModuleHandle(moduleName);
-				}
-				/*-----------------------------------------------------------*/
-				mem_t GetPointer(mem_t baseAddress, std::vector<mem_t> offsets)
-				{
-					mem_t addr = baseAddress;
-					for (unsigned int i = 0; i < offsets.size(); ++i)
+					MODULEENTRY32 modEntry;
+					modEntry.dwSize = sizeof(modEntry);
+					if (Module32First(hSnap, &modEntry))
 					{
-						addr += offsets[i];
-						addr = *(mem_t*)addr;
+						do
+						{
+							if (!lstrcmp(modEntry.szModule, moduleName))
+							{
+								moduleAddr = (mem_t)modEntry.modBaseAddr;
+								break;
+							}
+						} while (Module32Next(hSnap, &modEntry));
 					}
-					return addr;
 				}
-				/*-----------------------------------------------------------*/
-				bool WriteBuffer(mem_t address, const void* value, SIZE_T size)
+				CloseHandle(hSnap);
+				return moduleAddr;
+			}
+			/*-----------------------------------------------------------*/
+			HANDLE GetProcessHandle(pid_t pid)
+			{
+				return OpenProcess(PROCESS_ALL_ACCESS, NULL, pid);
+			}
+			/*-----------------------------------------------------------*/
+			BOOL WriteBuffer(HANDLE hProc, mem_t address, const void* value, SIZE_T size)
+			{
+				return WriteProcessMemory(hProc, (BYTE*)address, value, size, nullptr);
+			}
+			/*-----------------------------------------------------------*/
+			BOOL ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T size)
+			{
+				return ReadProcessMemory(hProc, (BYTE*)address, buffer, size, nullptr);
+			}
+			/*-----------------------------------------------------------*/
+			mem_t GetPointer(HANDLE hProc, mem_t baseAddress, std::vector<mem_t> offsets)
+			{
+				mem_t addr = baseAddress;
+				for (unsigned int i = 0; i < offsets.size(); ++i)
 				{
-					DWORD oProtection;
-					if (VirtualProtect((LPVOID)address, size, PAGE_EXECUTE_READWRITE, &oProtection))
-					{
-						memcpy((void*)(address), value, size);
-						VirtualProtect((LPVOID)address, size, oProtection, NULL);
-						return true;
-					}
+					addr += offsets[i];
+					ReadProcessMemory(hProc, (BYTE*)addr, &addr, sizeof(addr), 0);
+				}
+				return addr;
+			}
+			/*-----------------------------------------------------------*/
+		}
 
-					return false;
-				}
-				/*-----------------------------------------------------------*/
-				bool ReadBuffer(mem_t address, void* buffer, SIZE_T size)
+		namespace In
+		{
+			HANDLE GetCurrentProcessHandle()
+			{
+				return GetCurrentProcess();
+			}
+			/*-----------------------------------------------------------*/
+			pid_t GetCurrentPID()
+			{
+				return GetCurrentProcessId();
+			}
+			/*-----------------------------------------------------------*/
+			mem_t GetModuleAddress(LPCWSTR moduleName)
+			{
+				return (mem_t)GetModuleHandle(moduleName);
+			}
+			/*-----------------------------------------------------------*/
+			mem_t GetPointer(mem_t baseAddress, std::vector<mem_t> offsets)
+			{
+				mem_t addr = baseAddress;
+				for (unsigned int i = 0; i < offsets.size(); ++i)
 				{
-					WriteBuffer((mem_t)buffer, (void*)address, size);
-					return false;
+					addr += offsets[i];
+					addr = *(mem_t*)addr;
 				}
+				return addr;
+			}
+			/*-----------------------------------------------------------*/
+			bool WriteBuffer(mem_t address, const void* value, SIZE_T size)
+			{
+				DWORD oProtection;
+				if (VirtualProtect((LPVOID)address, size, PAGE_EXECUTE_READWRITE, &oProtection))
+				{
+					memcpy((void*)(address), value, size);
+					VirtualProtect((LPVOID)address, size, oProtection, NULL);
+					return true;
+				}
+
+				return false;
+			}
+			/*-----------------------------------------------------------*/
+			bool ReadBuffer(mem_t address, void* buffer, SIZE_T size)
+			{
+				WriteBuffer((mem_t)buffer, (void*)address, size);
+				return false;
 			}
 		}
 	}
 #endif
-
+/*---LINUX,ETC SPECIFIC----------------------------------------------------------*/
 #ifdef LINUX
-	namespace Linux
+	namespace Memory
 	{
-		namespace Memory
+		bool IsBadPointer(void* pointer)
 		{
-			bool IsBadPointer(void* pointer)
+			int fh = open((const char*)pointer, 0, 0);
+			int e = errno;
+
+			if (fh == -1 && e != EFAULT)
 			{
-				int fh = open((const char*)pointer, 0, 0);
-				int e = errno;
-
-				if (fh == -1 && e != EFAULT)
-				{
-					close(fh);
-					return false;
-				}
-
-				return true;
+				close(fh);
+				return false;
 			}
 
-			namespace Ex
-			{
-				pid_t GetProcessID(std::string processName)
-				{
-					pid_t pid = INVALID_PID;
-					DIR* pdir = opendir("/proc");
-					if (!pdir)
-						return INVALID_PID;
+			return true;
+		}
 
-					struct dirent* pdirent;
-					while (pid < 0 && (pdirent = readdir(pdir)))
+		namespace Ex
+		{
+			pid_t GetProcessID(std::string processName)
+			{
+				pid_t pid = INVALID_PID;
+				DIR* pdir = opendir("/proc");
+				if (!pdir)
+					return INVALID_PID;
+
+				struct dirent* pdirent;
+				while (pid < 0 && (pdirent = readdir(pdir)))
+				{
+					int id = atoi(pdirent->d_name);
+					if (id > 0)
 					{
-						int id = atoi(pdirent->d_name);
-						if (id > 0)
+						std::string cmdpath = std::string("/proc/") + pdirent->d_name + "/cmdline";
+						std::ifstream cmdfile(cmdpath.c_str());
+						std::string cmdline;
+						getline(cmdfile, cmdline);
+						size_t pos = cmdline.find('\0');
+						if (!cmdline.empty())
 						{
-							std::string cmdpath = std::string("/proc/") + pdirent->d_name + "/cmdline";
-							std::ifstream cmdfile(cmdpath.c_str());
-							std::string cmdline;
-							getline(cmdfile, cmdline);
-							size_t pos = cmdline.find('\0');
-							if (!cmdline.empty())
-							{
-								if (pos != std::string::npos)
-									cmdline = cmdline.substr(0, pos);
-								pos = cmdline.rfind('/');
-								if (pos != std::string::npos)
-									cmdline = cmdline.substr(pos + 1);
-								if (processName == cmdline.c_str())
-									pid = id;
-							}
+							if (pos != std::string::npos)
+								cmdline = cmdline.substr(0, pos);
+							pos = cmdline.rfind('/');
+							if (pos != std::string::npos)
+								cmdline = cmdline.substr(pos + 1);
+							if (processName == cmdline.c_str())
+								pid = id;
 						}
 					}
-					closedir(pdir);
-					return pid;
 				}
-				/*-----------------------------------------------------------*/
-				void ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size)
-				{
-					char file[MAX_FILENAME];
-					sprintf(file, "/proc/%ld/mem", (long)pid);
-					int fd = open(file, O_RDWR);
-					ptrace(PTRACE_ATTACH, pid, 0, 0);
-					waitpid(pid, NULL, 0);
-					pread(fd, buffer, size, address);
-					ptrace(PTRACE_DETACH, pid, 0, 0);
-					close(fd);
-				}
-				/*-----------------------------------------------------------*/
-				void WriteBuffer(pid_t pid, mem_t address, void* value, size_t size)
-				{
-					char file[MAX_FILENAME];
-					sprintf(file, "/proc/%ld/mem", (long)pid);
-					int fd = open(file, O_RDWR);
-					ptrace(PTRACE_ATTACH, pid, 0, 0);
-					waitpid(pid, NULL, 0);
-					pwrite(fd, value, size, address);
-					ptrace(PTRACE_DETACH, pid, 0, 0);
-					close(fd);
-				}
-				/*-----------------------------------------------------------*/
-				bool IsProcessRunning(pid_t pid)
-				{
-					char dirbuf[MAX_FILENAME];
-					sprintf(dirbuf, "/proc/%ld", (long)pid);
-					struct stat status;
-					stat(dirbuf, &status);
-					return status.st_mode & S_IFDIR != 0;
-				}
+				closedir(pdir);
+				return pid;
 			}
-
-			namespace In
+			/*-----------------------------------------------------------*/
+			void ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size)
 			{
-				pid_t GetCurrentProcessID()
-				{
-					pid_t pid = getpid();
-					if (pid <= 0) pid = INVALID_PID;
-					return pid;
-				}
-				/*-----------------------------------------------------------*/
-				bool ReadBuffer(mem_t address, void* buffer, size_t size)
-				{
-					memcpy((void*)buffer, (void*)address, size);
-					return true;
-				}
-				/*-----------------------------------------------------------*/
-				bool WriteBuffer(mem_t address, void* value, size_t size)
-				{
-					memcpy((void*)address, (void*)value, size);
-					return true;
-				}
+				char file[MAX_FILENAME];
+				sprintf(file, "/proc/%ld/mem", (long)pid);
+				int fd = open(file, O_RDWR);
+				ptrace(PTRACE_ATTACH, pid, 0, 0);
+				waitpid(pid, NULL, 0);
+				pread(fd, buffer, size, address);
+				ptrace(PTRACE_DETACH, pid, 0, 0);
+				close(fd);
+			}
+			/*-----------------------------------------------------------*/
+			void WriteBuffer(pid_t pid, mem_t address, void* value, size_t size)
+			{
+				char file[MAX_FILENAME];
+				sprintf(file, "/proc/%ld/mem", (long)pid);
+				int fd = open(file, O_RDWR);
+				ptrace(PTRACE_ATTACH, pid, 0, 0);
+				waitpid(pid, NULL, 0);
+				pwrite(fd, value, size, address);
+				ptrace(PTRACE_DETACH, pid, 0, 0);
+				close(fd);
+			}
+			/*-----------------------------------------------------------*/
+			bool IsProcessRunning(pid_t pid)
+			{
+				char dirbuf[MAX_FILENAME];
+				sprintf(dirbuf, "/proc/%ld", (long)pid);
+				struct stat status;
+				stat(dirbuf, &status);
+				return status.st_mode & S_IFDIR != 0;
+			}
+		}
+
+		namespace In
+		{
+			pid_t GetCurrentProcessID()
+			{
+				pid_t pid = getpid();
+				if (pid <= 0) pid = INVALID_PID;
+				return pid;
+			}
+			/*-----------------------------------------------------------*/
+			bool ReadBuffer(mem_t address, void* buffer, size_t size)
+			{
+				memcpy((void*)buffer, (void*)address, size);
+				return true;
+			}
+			/*-----------------------------------------------------------*/
+			bool WriteBuffer(mem_t address, void* value, size_t size)
+			{
+				memcpy((void*)address, (void*)value, size);
+				return true;
 			}
 		}
 	}

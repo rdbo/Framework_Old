@@ -86,69 +86,64 @@ namespace Framework
 		void MultiByteToWideChar(char mbstr[], wchar_t wcbuf[], size_t max_size);
 		void WideCharToMultiByte(wchar_t wcstr[], char mbbuf[], size_t max_size);
 	}
+/*---WINDOWS SPECIFIC----------------------------------------------------------*/
 #ifdef WIN
-	namespace Windows
+	namespace Memory
 	{
-		namespace Memory
+		bool IsBadPointer(void* pointer);
+
+		namespace Ex
 		{
-			bool IsBadPointer(void* pointer);
+			pid_t GetPID(LPCWSTR processName);
+			HANDLE GetProcessHandle(pid_t pid);
+			mem_t GetModuleAddress(LPCWSTR moduleName, pid_t pid);
+			mem_t GetPointer(HANDLE hProc, mem_t ptr, std::vector<mem_t> offsets);
+			BOOL WriteBuffer(HANDLE hProc, mem_t address, const void* value, SIZE_T size);
+			BOOL ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T size);
+		}
 
-			namespace Ex
+		namespace In
+		{
+			HANDLE GetCurrentProcessHandle();
+			pid_t GetCurrentPID();
+			mem_t GetModuleAddress(LPCWSTR moduleName);
+			mem_t GetPointer(mem_t baseAddress, std::vector<mem_t> offsets);
+			bool WriteBuffer(mem_t address, const void* value, SIZE_T size);
+			bool ReadBuffer(mem_t address, void* buffer, SIZE_T size);
+			template <class type_t>
+			type_t Read(mem_t address)
 			{
-				pid_t GetPID(LPCWSTR processName);
-				HANDLE GetProcessHandle(pid_t pid);
-				mem_t GetModuleAddress(LPCWSTR moduleName, pid_t pid);
-				mem_t GetPointer(HANDLE hProc, mem_t ptr, std::vector<mem_t> offsets);
-				BOOL WriteBuffer(HANDLE hProc, mem_t address, const void* value, SIZE_T size);
-				BOOL ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T size);
+				if (IsBadPointer((void*)address)) return (type_t)BAD_RETURN;
+				return *(type_t*)(address);
 			}
-
-			namespace In
+			template <class type_t>
+			void Write(mem_t address, type_t value)
 			{
-				HANDLE GetCurrentProcessHandle();
-				pid_t GetCurrentPID();
-				mem_t GetModuleAddress(LPCWSTR moduleName);
-				mem_t GetPointer(mem_t baseAddress, std::vector<mem_t> offsets);
-				bool WriteBuffer(mem_t address, const void* value, SIZE_T size);
-				bool ReadBuffer(mem_t address, void* buffer, SIZE_T size);
-				template <class type_t>
-				type_t Read(mem_t address)
-				{
-					if (IsBadPointer((void*)address)) return (type_t)BAD_RETURN;
-					return *(type_t*)(address);
-				}
-				template <class type_t>
-				void Write(mem_t address, type_t value)
-				{
-					if (IsBadPointer((void*)address)) return (type_t)BAD_RETURN;
-					*(type_t*)(address) = value;
-				}
+				if (IsBadPointer((void*)address)) return (type_t)BAD_RETURN;
+				*(type_t*)(address) = value;
 			}
 		}
 	}
 #endif
-
+/*---LINUX,ETC SPECIFIC----------------------------------------------------------*/
 #ifdef LINUX
-	namespace Linux
+	namespace Memory
 	{
-		namespace Memory
+		bool IsBadPointer(void* pointer);
+
+		namespace Ex
 		{
-			bool IsBadPointer(void* pointer);
+			pid_t GetProcessID(std::string processName);
+			void ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
+			void WriteBuffer(pid_t pid, mem_t address, void* value, size_t size);
+			bool IsProcessRunning(pid_t pid);
+		}
 
-			namespace Ex
-			{
-				pid_t GetProcessID(std::string processName);
-				void ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
-				void WriteBuffer(pid_t pid, mem_t address, void* value, size_t size);
-				bool IsProcessRunning(pid_t pid);
-			}
-
-			namespace In
-			{
-				pid_t GetCurrentProcessID();
-				bool ReadBuffer(mem_t address, void* buffer, size_t size);
-				bool WriteBuffer(mem_t address, void* value, size_t size);
-			}
+		namespace In
+		{
+			pid_t GetCurrentProcessID();
+			bool ReadBuffer(mem_t address, void* buffer, size_t size);
+			bool WriteBuffer(mem_t address, void* value, size_t size);
 		}
 	}
 #endif
