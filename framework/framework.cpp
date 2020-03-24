@@ -34,6 +34,7 @@ namespace Framework
 		}
 	}
 
+/*---WINDOWS SPECIFIC----------------------------------------------------------*/
 #ifdef WIN
 	namespace Memory
 	{
