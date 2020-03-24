@@ -71,7 +71,7 @@ bool Framework::Memory::IsBadPointer(void* pointer)
 
 #if defined(WIN)
 
-pid_t Framework::Memory::Ex::GetProcessID(LPCWSTR processName)
+pid_t Framework::Memory::Ex::GetProcessIdByName(LPCWSTR processName)
 {
 	pid_t pid = 0;
 	HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -94,6 +94,20 @@ pid_t Framework::Memory::Ex::GetProcessID(LPCWSTR processName)
 		}
 	}
 	CloseHandle(hSnap);
+	return pid;
+}
+/*-----------------------------------------*/
+pid_t Framework::Memory::Ex::GetProcessIdByWindow(LPCSTR windowName)
+{
+	pid_t pid;
+	GetWindowThreadProcessId(FindWindowA(NULL, windowName), &pid);
+	return pid;
+}
+
+pid_t Framework::Memory::Ex::GetProcessIdByWindow(LPCSTR windowClass, LPCSTR windowName)
+{
+	pid_t pid;
+	GetWindowThreadProcessId(FindWindowA(windowClass, windowName), &pid);
 	return pid;
 }
 /*-----------------------------------------*/
@@ -150,7 +164,7 @@ BOOL Framework::Memory::Ex::ReadBuffer(HANDLE hProc, mem_t address, void* buffer
 //-----------------------------------------//
 //-----------------------------------------//
 #elif defined(LINUX)
-pid_t Framework::Memory::Ex::GetProcessID(std::string processName)
+pid_t Framework::Memory::Ex::GetProcessIdByName(std::string processName)
 {
 	pid_t pid = INVALID_PID;
 	DIR* pdir = opendir("/proc");

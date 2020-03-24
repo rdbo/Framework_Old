@@ -104,14 +104,16 @@ namespace Framework
 		namespace Ex
 		{
 #if defined(WIN)
-			pid_t GetProcessID(LPCWSTR processName);
+			pid_t GetProcessIdByName(LPCWSTR processName);
+			pid_t GetProcessIdByWindow(LPCSTR windowName);
+			pid_t GetProcessIdByWindow(LPCSTR windowClass, LPCSTR windowName);
 			HANDLE GetProcessHandle(pid_t pid);
 			mem_t GetModuleAddress(LPCWSTR moduleName, pid_t pid);
 			mem_t GetPointer(HANDLE hProc, mem_t ptr, std::vector<mem_t> offsets);
 			BOOL WriteBuffer(HANDLE hProc, mem_t address, const void* value, SIZE_T size);
 			BOOL ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T size);
 #elif defined(LINUX)
-			pid_t GetProcessID(std::string processName);
+			pid_t GetProcessIdByName(std::string processName);
 			void ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
 			void WriteBuffer(pid_t pid, mem_t address, void* value, size_t size);
 			bool IsProcessRunning(pid_t pid);
