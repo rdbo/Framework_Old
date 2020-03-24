@@ -68,7 +68,7 @@ namespace Framework
 		namespace FunctionManager
 		{
 			template <class type_t>
-			static std::unordered_map<std::string, std::function<type_t()>> function_arr;
+			std::unordered_map<std::string, std::function<type_t()>> function_arr;
 			template <class type_t>
 			bool Register(std::string strName, std::function<type_t()> func, bool overwrite = true)
 			{
