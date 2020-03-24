@@ -34,10 +34,10 @@ namespace Framework
 		}
 	}
 
-/*---WINDOWS SPECIFIC----------------------------------------------------------*/
-#ifdef WIN
 	namespace Memory
 	{
+/*---WINDOWS SPECIFIC----------------------------------------------------------*/
+#if defined(WIN) && !defined(LINUX)
 		bool IsBadPointer(void* pointer)
 		{
 			MEMORY_BASIC_INFORMATION mbi = { 0 };
@@ -178,12 +178,9 @@ namespace Framework
 				return false;
 			}
 		}
-	}
 #endif
 /*---LINUX,ETC SPECIFIC----------------------------------------------------------*/
-#ifdef LINUX
-	namespace Memory
-	{
+#if defined(LINUX) && !defined(WIN)
 		bool IsBadPointer(void* pointer)
 		{
 			int fh = open((const char*)pointer, 0, 0);
@@ -289,6 +286,6 @@ namespace Framework
 				return true;
 			}
 		}
-	}
 #endif
+	}
 }

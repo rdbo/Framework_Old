@@ -86,10 +86,11 @@ namespace Framework
 		void MultiByteToWideChar(char mbstr[], wchar_t wcbuf[], size_t max_size);
 		void WideCharToMultiByte(wchar_t wcstr[], char mbbuf[], size_t max_size);
 	}
-/*---WINDOWS SPECIFIC----------------------------------------------------------*/
-#ifdef WIN
+
 	namespace Memory
 	{
+		/*---WINDOWS SPECIFIC----------------------------------------------------------*/
+#if defined(WIN) && !defined(LINUX)
 		bool IsBadPointer(void* pointer);
 
 		namespace Ex
@@ -123,12 +124,9 @@ namespace Framework
 				*(type_t*)(address) = value;
 			}
 		}
-	}
 #endif
-/*---LINUX,ETC SPECIFIC----------------------------------------------------------*/
-#ifdef LINUX
-	namespace Memory
-	{
+		/*---LINUX,ETC SPECIFIC----------------------------------------------------------*/
+#if defined(LINUX) && !defined(WIN)
 		bool IsBadPointer(void* pointer);
 
 		namespace Ex
@@ -145,6 +143,6 @@ namespace Framework
 			bool ReadBuffer(mem_t address, void* buffer, size_t size);
 			bool WriteBuffer(mem_t address, void* value, size_t size);
 		}
-	}
 #endif
+	}
 }
