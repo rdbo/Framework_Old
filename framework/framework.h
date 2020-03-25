@@ -130,10 +130,11 @@ namespace Framework
 				return *(type_t*)(address);
 			}
 			template <class type_t>
-			void Write(mem_t address, type_t value)
+			bool Write(mem_t address, type_t value)
 			{
-				if (IsBadPointer((void*)address)) return (type_t)BAD_RETURN;
+				if (IsBadPointer((void*)address)) return false;
 				*(type_t*)(address) = value;
+				return true;
 			}
 #if defined(WIN)
 			HANDLE GetCurrentProcessHandle();
