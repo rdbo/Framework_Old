@@ -125,6 +125,11 @@ namespace Framework
 #if INCLUDE_DIRECTX9
 			namespace DX9
 			{
+				namespace Draw
+				{
+					void FilledRectangle(int x, int y, int w, int h, D3DCOLOR color, LPDIRECT3DDEVICE9 pdevice);
+					void Rectangle(int x, int y, int w, int h, int thickness, D3DCOLOR color, LPDIRECT3DDEVICE9 pdevice);
+				}
 				bool GetCurrentDevice(void** vtable, size_t size);
 			}
 #endif

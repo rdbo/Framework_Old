@@ -392,4 +392,19 @@ bool Framework::API::D3D::DX9::GetCurrentDevice(void** vtable, size_t size)
 	pD3D->Release();
 	return true;
 }
+
+//##--##--##--##--##--Framework::API::D3D::DX9::Draw
+void Framework::API::D3D::DX9::Draw::FilledRectangle(int x, int y, int w, int h, D3DCOLOR color, LPDIRECT3DDEVICE9 pdevice)
+{
+	D3DRECT BarRect = { x, y, x + w, y + h };
+	pdevice->Clear(1, &BarRect, D3DCLEAR_TARGET | D3DCLEAR_TARGET, color, 0, 0);
+}
+/*-----------------------------------------*/
+void Framework::API::D3D::DX9::Draw::Rectangle(int x, int y, int w, int h, int thickness, D3DCOLOR color, LPDIRECT3DDEVICE9 pdevice)
+{
+	FilledRectangle(x, y, w, thickness, color, pdevice);
+	FilledRectangle(x, y, thickness, h, color, pdevice);
+	FilledRectangle((x + w), y, thickness, h, color, pdevice);
+	FilledRectangle(x, y + h, w + thickness, thickness, color, pdevice);
+}
 #endif
