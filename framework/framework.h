@@ -1,5 +1,8 @@
 #pragma once
 
+//INCLUDES
+#define INCLUDE_DIRECTX9 0
+
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__) && !defined(linux)
 #define WIN
 #endif
@@ -24,6 +27,13 @@
 #define INSTRUCTION_SIZE BYTE_SIZE
 #define X86_JMP 0xE9
 #define X86_JMP_SIZE 5
+
+#if INCLUDE_DIRECTX9
+#include <d3d9.h>
+#include <d3dx9.h>
+#pragma comment(lib, "d3d9.lib")
+#pragma comment(lib, "d3dx9.lib")
+#endif
 
 typedef DWORD pid_t;
 typedef uintptr_t mem_t;
@@ -99,6 +109,27 @@ namespace Framework
 				}
 			}
 		}
+	}
+
+	namespace API
+	{
+#if defined(WIN)
+		namespace Windows
+		{
+			HWND GetCurrentWindow();
+		}
+#endif
+#if defined(WIN)
+		namespace D3D
+		{
+#if INCLUDE_DIRECTX9
+			namespace DX9
+			{
+				bool GetCurrentDevice(void** vtable, size_t size);
+			}
+#endif
+		}
+#endif
 	}
 
 	namespace Memory

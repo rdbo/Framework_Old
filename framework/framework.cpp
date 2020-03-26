@@ -1,5 +1,5 @@
 #include "framework.h"
-
+HWND window;
 //##--Framework
 //##--##--Framework::Utility
 
@@ -329,5 +329,67 @@ char* Framework::Memory::In::Hook::x86::TrampolineHook(char* src, char* dst, siz
 	*(mem_t*)((mem_t)gateway + size + INSTRUCTION_SIZE) = gatewayRelAddr;
 	Detour(src, dst, size);
 	return (char*)gateway;
+}
+#endif
+
+//##--##--Framework::API
+//##--##--##--Framework::API::Windows
+BOOL CALLBACK EnumWindowsCallback(HWND handle, LPARAM lParam)
+{
+	DWORD wndProcId;
+	GetWindowThreadProcessId(handle, &wndProcId);
+
+	if (GetCurrentProcessId() != wndProcId)
+		return TRUE;
+
+	window = handle;
+	return FALSE;
+}
+
+HWND Framework::API::Windows::GetCurrentWindow()
+{
+	window = NULL;
+	EnumWindows(EnumWindowsCallback, NULL);
+	return window;
+}
+//##--##--##--Framework::API::D3D
+//##--##--##--##--Framework::API::D3D::DX9
+#if INCLUDE_DIRECTX9
+bool Framework::API::D3D::DX9::GetCurrentDevice(void** vtable, size_t size)
+{
+	if (!vtable)
+		return false;
+
+	IDirect3D9* pD3D = Direct3DCreate9(D3D_SDK_VERSION);
+
+	if (!pD3D)
+		return false;
+
+	IDirect3DDevice9* pDummyDevice = NULL;
+	D3DPRESENT_PARAMETERS d3dpp = {};
+	d3dpp.Windowed = false;
+	d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
+	d3dpp.hDeviceWindow = Framework::API::Windows::GetCurrentWindow();
+
+	HRESULT dummyDeviceCreated = pD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, d3dpp.hDeviceWindow, D3DCREATE_SOFTWARE_VERTEXPROCESSING, &d3dpp, &pDummyDevice);
+
+	if (dummyDeviceCreated != S_OK)
+	{
+		d3dpp.Windowed = !d3dpp.Windowed;
+
+		dummyDeviceCreated = pD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, d3dpp.hDeviceWindow, D3DCREATE_SOFTWARE_VERTEXPROCESSING, &d3dpp, &pDummyDevice);
+
+		if (dummyDeviceCreated != S_OK)
+		{
+			pD3D->Release();
+			return false;
+		}
+	}
+
+	memcpy(vtable, *reinterpret_cast<void***>(pDummyDevice), size);
+
+	pDummyDevice->Release();
+	pD3D->Release();
+	return true;
 }
 #endif
