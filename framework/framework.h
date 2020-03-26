@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <map>
 #include <unordered_map>
 #include <functional>
 
@@ -19,6 +20,10 @@
 #include <vector>
 #include <Windows.h>
 #include <TlHelp32.h>
+#define BYTE_SIZE 1
+#define INSTRUCTION_SIZE BYTE_SIZE
+#define X86_JMP 0xE9
+#define X86_JMP_SIZE 5
 
 typedef DWORD pid_t;
 typedef uintptr_t mem_t;

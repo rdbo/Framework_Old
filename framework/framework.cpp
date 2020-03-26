@@ -309,28 +309,25 @@ bool Framework::Memory::In::WriteBuffer(mem_t address, void* value, size_t size)
 #if defined(WIN)
 bool Framework::Memory::In::Hook::x86::Detour(char* src, char* dst, size_t size)
 {
-	char jmp = '\xE9';
 	if (size < 5) return false;
-	DWORD oProtect;
+	DWORD  oProtect;
 	VirtualProtect(src, size, PAGE_EXECUTE_READWRITE, &oProtect);
-	*src = jmp;
-	uintptr_t relAddr = dst - src - size;
-	*(uintptr_t*)(src + sizeof(jmp)) = relAddr;
+	mem_t  relAddr = (mem_t)(dst - (mem_t)src) - X86_JMP_SIZE;
+	*src = X86_JMP;
+	*(mem_t*)((mem_t)src + INSTRUCTION_SIZE) = relAddr;
 	VirtualProtect(src, size, oProtect, &oProtect);
 	return true;
 }
 
 char* Framework::Memory::In::Hook::x86::TrampolineHook(char* src, char* dst, size_t size)
 {
-	char jmp = '\xE9';
-	void* gateway = VirtualAlloc(0, size + 5, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-	DWORD oProtect;
-	VirtualProtect(src, size, PAGE_EXECUTE_READWRITE, &oProtect);
+	if (size < 5) return 0;
+	void* gateway = VirtualAlloc(0, size + X86_JMP_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	memcpy(gateway, src, size);
-	*(char*)((char*)gateway + size) = jmp;
-	uintptr_t relGatewayAddr = (uintptr_t)((char*)gateway - src - (size + 5));
-	*(char*)((uintptr_t)gateway + sizeof(jmp)) = relGatewayAddr;
-	VirtualProtect(src, size, oProtect, &oProtect);
+	mem_t  gatewayRelAddr = ((mem_t)src - (mem_t)gateway) - X86_JMP_SIZE;
+	*(char*)((mem_t)gateway + size) = X86_JMP;
+	*(mem_t*)((mem_t)gateway + size + INSTRUCTION_SIZE) = gatewayRelAddr;
+	Detour(src, dst, size);
 	return (char*)gateway;
 }
 #endif
