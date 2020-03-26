@@ -1,7 +1,7 @@
 #include "framework.h"
 
 //##--Framework
-//##--##--Utility
+//##--##--Framework::Utility
 
 unsigned int Framework::Utility::FileToArrayOfBytes(std::string filepath, char*& pbuffer)
 {
@@ -27,7 +27,7 @@ void Framework::Utility::WideCharToMultiByte(wchar_t wcstr[], char mbbuf[], size
 	wcstombs(mbbuf, wcstr, max_size);
 }
 
-//##--##--Memory
+//##--##--Framework::Memory
 
 void Framework::Memory::ZeroMem(void* src, size_t size)
 {
@@ -67,7 +67,7 @@ bool Framework::Memory::IsBadPointer(void* pointer)
 }
 #endif
 
-//##--##--##--Ex
+//##--##--##--Memory::Ex
 
 #if defined(WIN)
 
@@ -232,7 +232,7 @@ bool Framework::Memory::Ex::IsProcessRunning(pid_t pid)
 }
 #endif
 
-//##--##--##--In
+//##--##--##--Framework::Memory::In
 
 #if defined(WIN)
 HANDLE Framework::Memory::In::GetCurrentProcessHandle()
@@ -301,5 +301,36 @@ bool Framework::Memory::In::WriteBuffer(mem_t address, void* value, size_t size)
 {
 	memcpy((void*)address, (void*)value, size);
 	return true;
+}
+#endif
+
+//##--##--##--##--Framework::Memory::In::Hook
+//##--##--##--##--Framework::Memory::In::Hook::x86
+#if defined(WIN)
+bool Framework::Memory::In::Hook::x86::Detour(char* src, char* dst, size_t size)
+{
+	char jmp = '\xE9';
+	if (size < 5) return false;
+	DWORD oProtect;
+	VirtualProtect(src, size, PAGE_EXECUTE_READWRITE, &oProtect);
+	*src = jmp;
+	uintptr_t relAddr = dst - src - size;
+	*(uintptr_t*)(src + sizeof(jmp)) = relAddr;
+	VirtualProtect(src, size, oProtect, &oProtect);
+	return true;
+}
+
+char* Framework::Memory::In::Hook::x86::TrampolineHook(char* src, char* dst, size_t size)
+{
+	char jmp = '\xE9';
+	void* gateway = VirtualAlloc(0, size + 5, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	DWORD oProtect;
+	VirtualProtect(src, size, PAGE_EXECUTE_READWRITE, &oProtect);
+	memcpy(gateway, src, size);
+	*(char*)((char*)gateway + size) = jmp;
+	uintptr_t relGatewayAddr = (uintptr_t)((char*)gateway - src - (size + 5));
+	*(char*)((uintptr_t)gateway + sizeof(jmp)) = relGatewayAddr;
+	VirtualProtect(src, size, oProtect, &oProtect);
+	return (char*)gateway;
 }
 #endif

@@ -146,6 +146,16 @@ namespace Framework
 			bool ReadBuffer(mem_t address, void* buffer, size_t size);
 			bool WriteBuffer(mem_t address, void* value, size_t size);
 #endif
+			namespace Hook
+			{
+				namespace x86
+				{
+#if defined(WIN)
+					bool Detour(char* src, char* dst, size_t size);
+					char* TrampolineHook(char* src, char* dst, size_t size);
+#endif
+				}
+			}
 		}
 	}
 }
