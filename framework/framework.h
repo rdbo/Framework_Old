@@ -1,24 +1,41 @@
 #pragma once
 
-//INCLUDES
-#define INCLUDE_DIRECTX9 0
+//Includes
 
+#define INCLUDE_UTILITY          1
+#define INCLUDE_MEMORY           1
+#define INCLUDE_MEMORY_INTERNAL  1
+#define INCLUDE_MEMORY_EXTERNAL  1
+#define INCLUDE_FUNCTION_MANAGER 1
+#define INCLUDE_API              1
+#define INCLUDE_D3D              0
+#define INCLUDE_DIRECTX9         0
+
+//Definitions
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__) && !defined(linux)
 #define WIN
-#endif
-
-#if defined(linux) && !defined(WIN)
+#elif defined(linux)
 #define LINUX
 #endif
 
+#if defined(_M_IX86) || defined(__i386__)
+#define ARCH_X86
+#elif defined(_M_X64) || defined(__LP64__) || defined(_LP64)
+#define ARCH_X64
+#endif
+
+#if defined(WIN) || defined(LINUX)
+#define FRAMEWORK
+#endif
+
+//Includes / OS specific
 #include <iostream>
 #include <fstream>
 #include <map>
 #include <unordered_map>
 #include <functional>
 
-#ifdef WIN
-//define _CRT_SECURE_NO_WARNINGS
+#if defined(WIN)
 #include <iostream>
 #include <vector>
 #include <Windows.h>
@@ -34,12 +51,10 @@
 #pragma comment(lib, "d3d9.lib")
 #pragma comment(lib, "d3dx9.lib")
 #endif
-
 typedef DWORD pid_t;
 typedef uintptr_t mem_t;
-#endif
 
-#ifdef LINUX
+#elif defined(LINUX)
 #include <sys/types.h>
 #include <dirent.h>
 #include <errno.h>
@@ -58,85 +73,87 @@ typedef uintptr_t mem_t;
 #include <sys/mman.h>
 #define INVALID_PID -1
 #define MAX_FILENAME 256
-
 typedef off_t mem_t;
 #endif
 
-#define BAD_FUNCTION 0
 #define BAD_RETURN 0
-#if defined(WIN) && !defined(LINUX)
-#define IS_WIN
-#elif !defined(WIN) && defined(LINUX)
-#define IS_LINUX
-#endif
+#define BAD_FUNCTION 0
 
-#if defined(WIN) || defined(LINUX)
+//Framework
+
+#ifdef FRAMEWORK
 namespace Framework
 {
-	namespace Utility
-	{
-
-		unsigned int FileToArrayOfBytes(std::string filepath, char*& pbuffer);
-		void MultiByteToWideChar(char mbstr[], wchar_t wcbuf[], size_t max_size);
-		void WideCharToMultiByte(wchar_t wcstr[], char mbbuf[], size_t max_size);
-
-		namespace FunctionManager
-		{
-			template <class type_t>
-			std::unordered_map<std::string, std::function<type_t()>> function_arr;
-			template <class type_t>
-			bool Register(std::string strName, std::function<type_t()> func, bool overwrite = true)
-			{
-				if (!overwrite && function_arr<type_t>.count(strName) > 0) return false;
-				function_arr<type_t>.insert(std::pair<std::string, std::function<type_t()>>(strName, func));
-				return true;
-			}
-			template <class type_t>
-			type_t Call(std::string strName)
-			{
-				if (function_arr<type_t>.count(strName) == 0 || function_arr<type_t>[strName] == BAD_FUNCTION) return (type_t)BAD_RETURN;
-
-				try
-				{
-					type_t ret = (type_t)function_arr<type_t>[strName]();
-					return ret;
-				}
-
-				catch (const std::exception & e)
-				{
-					function_arr<type_t>[strName] = BAD_FUNCTION;
-					return (type_t)BAD_RETURN;
-				}
-			}
-		}
-	}
-
+#	if INCLUDE_API
 	namespace API
 	{
-#if defined(WIN)
+#		if defined(WIN)
 		namespace Windows
 		{
 			HWND GetCurrentWindow();
 		}
-#endif
-#if defined(WIN)
+#		endif //Windows
+#		if INCLUDE_DIRECTX
 		namespace D3D
 		{
-#if INCLUDE_DIRECTX9
+#			if INCLUDE_DIRECTX9
 			namespace DX9
 			{
+				bool GetCurrentDevice(void** vtable, size_t size);
 				namespace Draw
 				{
 					void FilledRectangle(int x, int y, int w, int h, D3DCOLOR color, LPDIRECT3DDEVICE9 pdevice);
 					void Rectangle(int x, int y, int w, int h, int thickness, D3DCOLOR color, LPDIRECT3DDEVICE9 pdevice);
 				}
-				bool GetCurrentDevice(void** vtable, size_t size);
 			}
-#endif
+#			endif //DX9
 		}
-#endif
+#		endif //D3D
 	}
+#	endif //API
 
+#	if INCLUDE_UTILITY
+	namespace Utility
+	{
+		size_t FileToArrayOfBytes(std::string filepath, char*& pbuffer);
+		void MultiByteToWideChar(char mbstr[], wchar_t wcbuf[], size_t max_size);
+		void WideCharToMultiByte(wchar_t wcstr[], char mbbuf[], size_t max_size);
+	}
+#	endif //Utility
+
+#	if INCLUDE_FUNCTION_MANAGER
+	namespace FunctionManager
+	{
+		template <class type_t>
+		std::unordered_map<std::string, std::function<type_t()>> function_arr;
+		template <class type_t>
+		bool Register(std::string strName, std::function<type_t()> func, bool overwrite = true)
+		{
+			if (!overwrite && function_arr<type_t>.count(strName) > 0) return false;
+			function_arr<type_t>.insert(std::pair<std::string, std::function<type_t()>>(strName, func));
+			return true;
+		}
+		template <class type_t>
+		type_t Call(std::string strName)
+		{
+			if (function_arr<type_t>.count(strName) == 0 || function_arr<type_t>[strName] == BAD_FUNCTION) return (type_t)BAD_RETURN;
+
+			try
+			{
+				type_t ret = (type_t)function_arr<type_t>[strName]();
+				return ret;
+			}
+
+			catch (const std::exception & e)
+			{
+				function_arr<type_t>[strName] = BAD_FUNCTION;
+				return (type_t)BAD_RETURN;
+			}
+		}
+	}
+#	endif //FunctionManager
+
+#	if INCLUDE_MEMORY
 	namespace Memory
 	{
 		void ZeroMem(void* src, size_t size);
@@ -144,7 +161,7 @@ namespace Framework
 
 		namespace Ex
 		{
-#if defined(WIN)
+#			if defined(WIN)
 			pid_t GetProcessIdByName(LPCWSTR processName);
 			pid_t GetProcessIdByWindow(LPCSTR windowName);
 			pid_t GetProcessIdByWindow(LPCSTR windowClass, LPCSTR windowName);
@@ -153,12 +170,12 @@ namespace Framework
 			mem_t GetPointer(HANDLE hProc, mem_t ptr, std::vector<mem_t> offsets);
 			BOOL WriteBuffer(HANDLE hProc, mem_t address, const void* value, SIZE_T size);
 			BOOL ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T size);
-#elif defined(LINUX)
+#			elif defined(LINUX)
 			pid_t GetProcessIdByName(std::string processName);
 			void ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
 			void WriteBuffer(pid_t pid, mem_t address, void* value, size_t size);
 			bool IsProcessRunning(pid_t pid);
-#endif
+#			endif //Ex
 		}
 
 		namespace In
@@ -177,29 +194,28 @@ namespace Framework
 				*(type_t*)(address) = value;
 				return true;
 			}
-#if defined(WIN)
+#			if defined(WIN)
 			HANDLE GetCurrentProcessHandle();
 			mem_t GetModuleAddress(LPCWSTR moduleName);
 			mem_t GetPointer(mem_t baseAddress, std::vector<mem_t> offsets);
 			bool WriteBuffer(mem_t address, const void* value, SIZE_T size);
 			bool ReadBuffer(mem_t address, void* buffer, SIZE_T size);
-#elif defined(LINUX)
+#			elif defined(LINUX)
 			bool ReadBuffer(mem_t address, void* buffer, size_t size);
 			bool WriteBuffer(mem_t address, void* value, size_t size);
-#endif
+#			endif //In
+
 			namespace Hook
 			{
 				extern std::map<mem_t, std::vector<char>> restore_arr;
 				bool Restore(mem_t address);
-				namespace x86
-				{
-#if defined(WIN)
-					bool Detour(char* src, char* dst, size_t size);
-					char* TrampolineHook(char* src, char* dst, size_t size);
-#endif
-				}
+#				if defined(WIN) && defined(ARCH_X86)
+				bool Detour(char* src, char* dst, size_t size);
+				char* TrampolineHook(char* src, char* dst, size_t size);
+#				endif //Hook
 			}
 		}
 	}
+#	endif //Memory
 }
-#endif
+#endif //Framework
