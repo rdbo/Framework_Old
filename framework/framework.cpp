@@ -1,5 +1,8 @@
 #include "framework.h"
+
 HWND window;
+std::map<mem_t, std::vector<char>> Framework::Memory::In::Hook::restore_arr;
+
 //##--Framework
 //##--##--Framework::Utility
 
@@ -305,6 +308,13 @@ bool Framework::Memory::In::WriteBuffer(mem_t address, void* value, size_t size)
 #endif
 
 //##--##--##--##--Framework::Memory::In::Hook
+bool Framework::Memory::In::Hook::Restore(mem_t address)
+{
+	if (restore_arr.count(address) <= 0) return false;
+	std::vector<char> obytes = restore_arr.at(address);
+	WriteBuffer(address, obytes.data(), obytes.size());
+	return true;
+}
 //##--##--##--##--Framework::Memory::In::Hook::x86
 #if defined(WIN)
 bool Framework::Memory::In::Hook::x86::Detour(char* src, char* dst, size_t size)
@@ -323,6 +333,18 @@ char* Framework::Memory::In::Hook::x86::TrampolineHook(char* src, char* dst, siz
 {
 	if (size < 5) return 0;
 	void* gateway = VirtualAlloc(0, size + X86_JMP_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+
+	char* bytes = new char(size);
+	ZeroMem(bytes, size);
+	memcpy(bytes, src, size);
+	std::vector<char> vbytes;
+	vbytes.reserve(size);
+	for (int i = 0; i < size; i++)
+	{
+		vbytes.insert(vbytes.begin()+i, bytes[i]);
+	}
+	restore_arr.insert(std::pair<mem_t, std::vector<char>>((mem_t)src, vbytes));
+
 	memcpy(gateway, src, size);
 	mem_t  gatewayRelAddr = ((mem_t)src - (mem_t)gateway) - X86_JMP_SIZE;
 	*(char*)((mem_t)gateway + size) = X86_JMP;
@@ -334,6 +356,7 @@ char* Framework::Memory::In::Hook::x86::TrampolineHook(char* src, char* dst, siz
 
 //##--##--Framework::API
 //##--##--##--Framework::API::Windows
+#ifdef WIN
 BOOL CALLBACK EnumWindowsCallback(HWND handle, LPARAM lParam)
 {
 	DWORD wndProcId;
@@ -352,9 +375,10 @@ HWND Framework::API::Windows::GetCurrentWindow()
 	EnumWindows(EnumWindowsCallback, NULL);
 	return window;
 }
+#endif
 //##--##--##--Framework::API::D3D
 //##--##--##--##--Framework::API::D3D::DX9
-#if INCLUDE_DIRECTX9
+#if INCLUDE_DIRECTX9 && defined(WIN)
 bool Framework::API::D3D::DX9::GetCurrentDevice(void** vtable, size_t size)
 {
 	if (!vtable)

@@ -27,7 +27,7 @@
 #define INSTRUCTION_SIZE BYTE_SIZE
 #define X86_JMP 0xE9
 #define X86_JMP_SIZE 5
-
+#define MAX_HOOK_SIZE 32
 #if INCLUDE_DIRECTX9
 #include <d3d9.h>
 #include <d3dx9.h>
@@ -189,6 +189,8 @@ namespace Framework
 #endif
 			namespace Hook
 			{
+				extern std::map<mem_t, std::vector<char>> restore_arr;
+				bool Restore(mem_t address);
 				namespace x86
 				{
 #if defined(WIN)
