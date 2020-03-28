@@ -438,6 +438,20 @@ namespace Framework
 				bool Detour(byte_t* src, byte_t* dst, size_t size)
 				{
 					if (size < HOOK_MIN_SIZE) return false;
+
+					//Save stolen bytes
+					byte_t* bytes = new byte_t(size);
+					ZeroMem(bytes, size);
+					memcpy(bytes, src, size);
+					std::vector<byte_t> vbytes;
+					vbytes.reserve(size);
+					for (int i = 0; i < size; i++)
+					{
+						vbytes.insert(vbytes.begin() + i, bytes[i]);
+					}
+					restore_arr.insert(std::pair<mem_t, std::vector<byte_t>>((mem_t)src, vbytes));
+
+					//Detour
 					DWORD  oProtect;
 					VirtualProtect(src, size, PAGE_EXECUTE_READWRITE, &oProtect);
 #					if defined(ARCH_X86)
@@ -459,18 +473,6 @@ namespace Framework
 				{
 					if (size < HOOK_MIN_SIZE) return 0;
 					void* gateway = VirtualAlloc(0, size + HOOK_MIN_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-
-					byte_t* bytes = new byte_t(size);
-					ZeroMem(bytes, size);
-					memcpy(bytes, src, size);
-					std::vector<byte_t> vbytes;
-					vbytes.reserve(size);
-					for (int i = 0; i < size; i++)
-					{
-						vbytes.insert(vbytes.begin() + i, bytes[i]);
-					}
-					restore_arr.insert(std::pair<mem_t, std::vector<byte_t>>((mem_t)src, vbytes));
-
 					memcpy(gateway, src, size);
 #					if defined(ARCH_X86)
 					mem_t jmpBack = ((mem_t)src - (mem_t)gateway) - HOOK_MIN_SIZE;

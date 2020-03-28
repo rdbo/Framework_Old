@@ -8,9 +8,9 @@
 #define INCLUDE_MEMORY_EXTERNAL  1
 #define INCLUDE_FUNCTION_MANAGER 1
 #define INCLUDE_API              1
-#define INCLUDE_DIRECTX          1
+#define INCLUDE_DIRECTX          0
 #define INCLUDE_DIRECTX9         0
-#define INCLUDE_DIRECTX11        1
+#define INCLUDE_DIRECTX11        0
 
 //Definitions
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__) && !defined(linux)
