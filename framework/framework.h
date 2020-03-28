@@ -3,6 +3,7 @@
 //Includes
 
 #define INCLUDE_UTILITY          1
+#define INCLUDE_INJECTION		 1
 #define INCLUDE_MEMORY           1
 #define INCLUDE_MEMORY_INTERNAL  1
 #define INCLUDE_MEMORY_EXTERNAL  1
@@ -236,5 +237,17 @@ namespace Framework
 		}
 	}
 #	endif //Memory
+
+#	if INCLUDE_INJECTION
+	namespace Injection
+	{
+#		if defined(WIN)
+		namespace DynamicLinkLib
+		{
+			bool LoadLibA(HANDLE hProc, std::string dllPath);
+		}
+#		endif
+	}
+#	endif //Injection
 }
 #endif //Framework

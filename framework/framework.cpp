@@ -326,7 +326,7 @@ namespace Framework
 				}
 				closedir(pdir);
 				return pid;
-		}
+			}
 			void ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size)
 			{
 				char file[MAX_FILENAME];
@@ -497,6 +497,23 @@ namespace Framework
 		}
 	}
 #	endif //Memory
+#	if INCLUDE_INJECTION
+	namespace Injection
+	{
+#		if defined(WIN)
+		namespace DynamicLinkLib
+		{
+			bool LoadLibA(HANDLE hProc, std::string dllPath)
+			{
+				void* loc = VirtualAllocEx(hProc, 0, dllPath.size() + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+				WriteProcessMemory(hProc, loc, dllPath.data(), dllPath.size() + 1, 0);
+				HANDLE hThread = CreateRemoteThread(hProc, 0, 0, (LPTHREAD_START_ROUTINE)LoadLibraryA, loc, 0, 0);
+				return true;
+			}
+		}
+#		endif
+	}
+#	endif //Injection
 }
 #endif //Framework
 
