@@ -503,11 +503,11 @@ namespace Framework
 #		if defined(WIN)
 		namespace DynamicLinkLib
 		{
-			bool LoadLibA(HANDLE hProc, str_t dllPath)
+			bool LoadLib(HANDLE hProc, str_t dllPath)
 			{
 				void* loc = VirtualAllocEx(hProc, 0, dllPath.size() + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 				WriteProcessMemory(hProc, loc, dllPath.data(), dllPath.size() + 1, 0);
-				HANDLE hThread = CreateRemoteThread(hProc, 0, 0, (LPTHREAD_START_ROUTINE)LoadLibraryA, loc, 0, 0);
+				HANDLE hThread = CreateRemoteThread(hProc, 0, 0, (LPTHREAD_START_ROUTINE)LoadLibrary, loc, 0, 0);
 				return true;
 			}
 		}
