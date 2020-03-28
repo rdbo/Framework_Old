@@ -28,7 +28,7 @@ namespace Framework
 			}
 		}
 #		endif //Windows
-#		if INCLUDE_DIRECTX
+#		if INCLUDE_DIRECTX && defined(WIN)
 		namespace D3D
 		{
 #			if INCLUDE_DIRECTX9
@@ -89,6 +89,59 @@ namespace Framework
 				}
 			}
 #			endif //DX9
+#			if INCLUDE_DIRECTX11
+			namespace DX11
+			{
+				bool GetSwapchainDeviceContext(void** pSwapchainTable, size_t Size_Swapchain, void** pDeviceTable, size_t Size_Device, void** pContextTable, size_t Size_Context)
+				{
+					DXGI_SWAP_CHAIN_DESC swapChainDesc{ 0 };
+					swapChainDesc.BufferCount = 1;
+					swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+					swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+					swapChainDesc.OutputWindow = GetForegroundWindow();
+					swapChainDesc.SampleDesc.Count = 1;
+					swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+					swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+					swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+
+					D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
+
+					IDXGISwapChain* pDummySwapChain = nullptr;
+					ID3D11Device* pDummyDevice = nullptr;
+					ID3D11DeviceContext* pDummyContext = nullptr;
+
+					if (FAILED(D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, NULL, &featureLevel, 1, D3D11_SDK_VERSION, &swapChainDesc, &pDummySwapChain, &pDummyDevice, NULL, &pDummyContext)))
+					{
+						swapChainDesc.Windowed = TRUE;
+						if (FAILED(D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, NULL, &featureLevel, 1, D3D11_SDK_VERSION, &swapChainDesc, &pDummySwapChain, &pDummyDevice, NULL, &pDummyContext)))
+						{
+							return false;
+						}
+					}
+
+					if (pSwapchainTable)
+					{
+						memcpy(pSwapchainTable, *reinterpret_cast<void***>(pDummySwapChain), Size_Swapchain);
+					}
+
+					if (pDeviceTable)
+					{
+						memcpy(pDeviceTable, *reinterpret_cast<void***>(pDummyDevice), Size_Device);
+					}
+
+					if (pContextTable)
+					{
+						memcpy(pContextTable, *reinterpret_cast<void***>(pDummyContext), Size_Context);
+					}
+
+					pDummySwapChain->Release();
+					pDummyDevice->Release();
+					pDummyContext->Release();
+
+					return true;
+				}
+			}
+#			endif
 		}
 #		endif //D3D
 	}
@@ -373,50 +426,71 @@ namespace Framework
 
 			namespace Hook
 			{
-				std::map<mem_t, std::vector<char>> restore_arr;
+				std::map<mem_t, std::vector<byte_t>> restore_arr;
 				bool Restore(mem_t address)
 				{
 					if (restore_arr.count(address) <= 0) return false;
-					std::vector<char> obytes = restore_arr.at(address);
+					std::vector<byte_t> obytes = restore_arr.at(address);
 					WriteBuffer(address, obytes.data(), obytes.size());
 					return true;
 				}
-#				if defined(WIN) && defined(ARCH_X86)
-				bool Detour(char* src, char* dst, size_t size)
+#				ifdef WIN
+				bool Detour(byte_t* src, byte_t* dst, size_t size)
 				{
-					if (size < 5) return false;
+					if (size < HOOK_MIN_SIZE) return false;
 					DWORD  oProtect;
 					VirtualProtect(src, size, PAGE_EXECUTE_READWRITE, &oProtect);
-					mem_t  relAddr = (mem_t)(dst - (mem_t)src) - X86_JMP_SIZE;
-					*src = X86_JMP;
-					*(mem_t*)((mem_t)src + INSTRUCTION_SIZE) = relAddr;
+#					if defined(ARCH_X86)
+					mem_t  jmpAddr = (mem_t)(dst - (mem_t)src) - HOOK_MIN_SIZE;
+					*src = JMP;
+					*(mem_t*)((mem_t)src + BYTE_SIZE) = jmpAddr;
+#					elif defined(ARCH_X64)
+					mem_t jmpAddr = (mem_t)dst;
+					*(byte_t*)src = MOV_RAX[0];
+					*(byte_t*)((mem_t)src + BYTE_SIZE) = MOV_RAX[1];
+					*(mem_t*)((mem_t)src + BYTE_SIZE + BYTE_SIZE) = jmpAddr;
+					*(byte_t*)((mem_t)src + BYTE_SIZE + BYTE_SIZE + sizeof(mem_t)) = JMP_RAX[0];
+					*(byte_t*)((mem_t)src + BYTE_SIZE + BYTE_SIZE + sizeof(mem_t) + BYTE_SIZE) = JMP_RAX[1];
+#					endif
 					VirtualProtect(src, size, oProtect, &oProtect);
 					return true;
 				}
-				char* TrampolineHook(char* src, char* dst, size_t size)
+				byte_t* TrampolineHook(byte_t* src, byte_t* dst, size_t size)
 				{
-					if (size < 5) return 0;
-					void* gateway = VirtualAlloc(0, size + X86_JMP_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+					if (size < HOOK_MIN_SIZE) return 0;
+					void* gateway = VirtualAlloc(0, size + HOOK_MIN_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 
-					char* bytes = new char(size);
+					byte_t* bytes = new byte_t(size);
 					ZeroMem(bytes, size);
 					memcpy(bytes, src, size);
-					std::vector<char> vbytes;
+					std::vector<byte_t> vbytes;
 					vbytes.reserve(size);
 					for (int i = 0; i < size; i++)
 					{
 						vbytes.insert(vbytes.begin() + i, bytes[i]);
 					}
-					restore_arr.insert(std::pair<mem_t, std::vector<char>>((mem_t)src, vbytes));
+					restore_arr.insert(std::pair<mem_t, std::vector<byte_t>>((mem_t)src, vbytes));
 
 					memcpy(gateway, src, size);
-					mem_t  gatewayRelAddr = ((mem_t)src - (mem_t)gateway) - X86_JMP_SIZE;
-					*(char*)((mem_t)gateway + size) = X86_JMP;
-					*(mem_t*)((mem_t)gateway + size + INSTRUCTION_SIZE) = gatewayRelAddr;
+#					if defined(ARCH_X86)
+					mem_t jmpBack = ((mem_t)src - (mem_t)gateway) - HOOK_MIN_SIZE;
+					*(byte_t*)((mem_t)gateway + size) = JMP;
+					*(mem_t*)((mem_t)gateway + size + BYTE_SIZE) = jmpBack;
+#					elif defined(ARCH_X64)
+					mem_t jmpBack = (mem_t)src + size;
+					//mov rax, jmpBack
+					*(byte_t*)((mem_t)gateway + size) = MOV_RAX[0];
+					*(byte_t*)((mem_t)gateway + size + BYTE_SIZE) = MOV_RAX[1];
+					*(mem_t*)((mem_t)gateway + size + BYTE_SIZE + BYTE_SIZE) = jmpBack;
+
+					//jmp rax
+					*(byte_t*)((mem_t)gateway + size + BYTE_SIZE + BYTE_SIZE + sizeof(mem_t)) = JMP_RAX[0];
+					*(byte_t*)((mem_t)gateway + size + BYTE_SIZE + BYTE_SIZE + sizeof(mem_t) + BYTE_SIZE) = JMP_RAX[1];
+#					endif
 					Detour(src, dst, size);
-					return (char*)gateway;
+					return (byte_t*)gateway;
 				}
-#				endif //Hook
+#				endif
 			}
 		}
 	}

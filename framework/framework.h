@@ -8,8 +8,9 @@
 #define INCLUDE_MEMORY_EXTERNAL  1
 #define INCLUDE_FUNCTION_MANAGER 1
 #define INCLUDE_API              1
-#define INCLUDE_D3D              0
+#define INCLUDE_DIRECTX          1
 #define INCLUDE_DIRECTX9         0
+#define INCLUDE_DIRECTX11        1
 
 //Definitions
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__) && !defined(linux)
@@ -40,16 +41,17 @@
 #include <vector>
 #include <Windows.h>
 #include <TlHelp32.h>
-#define BYTE_SIZE 1
-#define INSTRUCTION_SIZE BYTE_SIZE
-#define X86_JMP 0xE9
-#define X86_JMP_SIZE 5
-#define MAX_HOOK_SIZE 32
 #if INCLUDE_DIRECTX9
 #include <d3d9.h>
 #include <d3dx9.h>
 #pragma comment(lib, "d3d9.lib")
 #pragma comment(lib, "d3dx9.lib")
+#endif
+#if INCLUDE_DIRECTX11
+#include <d3d11.h>
+#include <dxgi.h>
+#pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "dxgi.lib")
 #endif
 typedef DWORD pid_t;
 typedef uintptr_t mem_t;
@@ -76,6 +78,17 @@ typedef uintptr_t mem_t;
 typedef off_t mem_t;
 #endif
 
+typedef unsigned char byte_t;
+#define BYTE_SIZE 1
+#if defined(ARCH_X86)
+#define HOOK_MIN_SIZE 5
+const byte_t JMP = 0xE9;
+#elif defined(ARCH_X64)
+#define HOOK_MIN_SIZE 12
+const byte_t MOV_RAX[] = { 0x48, 0xB8 };
+const byte_t JMP_RAX[] = { 0xFF, 0xE0 };
+#endif
+
 #define BAD_RETURN 0
 #define BAD_FUNCTION 0
 
@@ -93,7 +106,7 @@ namespace Framework
 			HWND GetCurrentWindow();
 		}
 #		endif //Windows
-#		if INCLUDE_DIRECTX
+#		if INCLUDE_DIRECTX && defined(WIN)
 		namespace D3D
 		{
 #			if INCLUDE_DIRECTX9
@@ -107,6 +120,12 @@ namespace Framework
 				}
 			}
 #			endif //DX9
+#			if INCLUDE_DIRECTX11
+			namespace DX11
+			{
+				bool GetSwapchainDeviceContext(void** pSwapchainTable, size_t Size_Swapchain, void** pDeviceTable, size_t Size_Device, void** pContextTable, size_t Size_Context);
+			}
+#			endif
 		}
 #		endif //D3D
 	}
@@ -207,11 +226,11 @@ namespace Framework
 
 			namespace Hook
 			{
-				extern std::map<mem_t, std::vector<char>> restore_arr;
+				extern std::map<mem_t, std::vector<byte_t>> restore_arr;
 				bool Restore(mem_t address);
-#				if defined(WIN) && defined(ARCH_X86)
-				bool Detour(char* src, char* dst, size_t size);
-				char* TrampolineHook(char* src, char* dst, size_t size);
+#				if defined(WIN)
+				bool Detour(byte_t* src, byte_t* dst, size_t size);
+				byte_t* TrampolineHook(byte_t* src, byte_t* dst, size_t size);
 #				endif //Hook
 			}
 		}
