@@ -150,7 +150,7 @@ namespace Framework
 #	if INCLUDE_UTILITY
 	namespace Utility
 	{
-		size_t FileToArrayOfBytes(str_t filepath, char*& pbuffer)
+		size_t FileToArrayOfBytes(std::string filepath, char*& pbuffer)
 		{
 			std::ifstream filestream(filepath, std::ios::binary | std::ios::ate);
 			if (filestream.fail()) return BAD_RETURN;
@@ -209,7 +209,7 @@ namespace Framework
 		namespace Ex
 		{
 #			if defined(WIN)
-			pid_t GetProcessIdByName(str_t processName)
+			pid_t GetProcessIdByName(LPCWSTR processName)
 			{
 				pid_t pid = 0;
 				HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -222,7 +222,7 @@ namespace Framework
 					{
 						do
 						{
-							if (!lstrcmp(procEntry.szExeFile, processName.c_str()))
+							if (!lstrcmp(procEntry.szExeFile, processName))
 							{
 								pid = procEntry.th32ProcessID;
 								break;
@@ -234,31 +234,23 @@ namespace Framework
 				CloseHandle(hSnap);
 				return pid;
 			}
-			pid_t GetProcessIdByWindow(str_t windowName)
+			pid_t GetProcessIdByWindow(LPCSTR windowName)
 			{
 				pid_t pid;
-#				if defined(UNICODE_CHARSET)
-				GetWindowThreadProcessId(FindWindowW(NULL, windowName.c_str()), &pid);
-#				elif defined(MULTIBYTE_CHARSET)
-				GetWindowThreadProcessId(FindWindowA(NULL, windowName.c_str()), &pid);
-#				endif
+				GetWindowThreadProcessId(FindWindowA(NULL, windowName), &pid);
 				return pid;
 			}
-			pid_t GetProcessIdByWindow(str_t windowClass, str_t windowName)
+			pid_t GetProcessIdByWindow(LPCSTR windowClass, LPCSTR windowName)
 			{
 				pid_t pid;
-#				if defined(UNICODE_CHARSET)
-				GetWindowThreadProcessId(FindWindowW(windowClass.c_str(), windowName.c_str()), &pid);
-#				elif defined(MULTIBYTE_CHARSET)
-				GetWindowThreadProcessId(FindWindowA(windowClass.c_str(), windowName.c_str()), &pid);
-#				endif
+				GetWindowThreadProcessId(FindWindowA(windowClass, windowName), &pid);
 				return pid;
 			}
 			HANDLE GetProcessHandle(pid_t pid)
 			{
 				return OpenProcess(PROCESS_ALL_ACCESS, NULL, pid);
 			}
-			mem_t GetModuleAddress(str_t moduleName, pid_t pid)
+			mem_t GetModuleAddress(LPCWSTR moduleName, pid_t pid)
 			{
 				mem_t moduleAddr = NULL;
 				HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid);
@@ -270,7 +262,7 @@ namespace Framework
 					{
 						do
 						{
-							if (!lstrcmp(modEntry.szModule, moduleName.c_str()))
+							if (!lstrcmp(modEntry.szModule, moduleName))
 							{
 								moduleAddr = (mem_t)modEntry.modBaseAddr;
 								break;
@@ -302,7 +294,7 @@ namespace Framework
 			}
 
 #			elif defined(LINUX)
-			pid_t GetProcessIdByName(str_t processName)
+			pid_t GetProcessIdByName(std::string processName)
 			{
 				pid_t pid = INVALID_PID;
 				DIR* pdir = opendir("/proc");
@@ -315,17 +307,17 @@ namespace Framework
 					int id = atoi(pdirent->d_name);
 					if (id > 0)
 					{
-						str_t cmdpath = str_t("/proc/") + pdirent->d_name + "/cmdline";
+						std::string cmdpath = std::string("/proc/") + pdirent->d_name + "/cmdline";
 						std::ifstream cmdfile(cmdpath.c_str());
-						str_t cmdline;
+						std::string cmdline;
 						getline(cmdfile, cmdline);
 						size_t pos = cmdline.find('\0');
 						if (!cmdline.empty())
 						{
-							if (pos != str_t::npos)
+							if (pos != std::string::npos)
 								cmdline = cmdline.substr(0, pos);
 							pos = cmdline.rfind('/');
-							if (pos != str_t::npos)
+							if (pos != std::string::npos)
 								cmdline = cmdline.substr(pos + 1);
 							if (processName == cmdline.c_str())
 								pid = id;
@@ -386,9 +378,9 @@ namespace Framework
 			{
 				return GetCurrentProcess();
 			}
-			mem_t GetModuleAddress(str_t moduleName)
+			mem_t GetModuleAddress(LPCWSTR moduleName)
 			{
-				return (mem_t)GetModuleHandle(moduleName.c_str());
+				return (mem_t)GetModuleHandle(moduleName);
 			}
 
 			mem_t GetPointer(mem_t baseAddress, std::vector<mem_t> offsets)
@@ -511,15 +503,11 @@ namespace Framework
 #		if defined(WIN)
 		namespace DynamicLinkLib
 		{
-			bool LoadLibA(HANDLE hProc, str_t dllPath)
+			bool LoadLibA(HANDLE hProc, std::string dllPath)
 			{
 				void* loc = VirtualAllocEx(hProc, 0, dllPath.size() + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 				WriteProcessMemory(hProc, loc, dllPath.data(), dllPath.size() + 1, 0);
-#				if defined(UNICODE_CHARSET)
-				HANDLE hThread = CreateRemoteThread(hProc, 0, 0, (LPTHREAD_START_ROUTINE)LoadLibraryW, loc, 0, 0);
-#				elif defined(MULTIBYTE_CHARSET)
 				HANDLE hThread = CreateRemoteThread(hProc, 0, 0, (LPTHREAD_START_ROUTINE)LoadLibraryA, loc, 0, 0);
-#				endif
 				return true;
 			}
 		}

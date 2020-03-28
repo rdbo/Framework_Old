@@ -3,12 +3,12 @@
 //Includes
 
 #define INCLUDE_UTILITY          1
-#define INCLUDE_INJECTION		 1
+#define INCLUDE_INJECTION        1
 #define INCLUDE_MEMORY           1
 #define INCLUDE_MEMORY_INTERNAL  1
 #define INCLUDE_MEMORY_EXTERNAL  1
 #define INCLUDE_FUNCTION_MANAGER 1
-#define INCLUDE_API              1
+#define INCLUDE_API              0
 #define INCLUDE_DIRECTX          0
 #define INCLUDE_DIRECTX9         0
 #define INCLUDE_DIRECTX11        0
@@ -28,12 +28,6 @@
 
 #if defined(WIN) || defined(LINUX)
 #define FRAMEWORK
-#endif
-
-#if defined(_UNICODE)
-#define UNICODE_CHARSET
-#else
-#define MULTIBYTE_CHARSET
 #endif
 
 //Includes / OS specific
@@ -62,11 +56,6 @@
 #endif
 typedef DWORD pid_t;
 typedef uintptr_t mem_t;
-#if defined(UNICODE_CHARSET)
-typedef std::wstring str_t;
-#elif defined(MULTIBYTE_CHARSET)
-typedef str_t str_t;
-#endif
 
 #elif defined(LINUX)
 #include <sys/types.h>
@@ -146,7 +135,7 @@ namespace Framework
 #	if INCLUDE_UTILITY
 	namespace Utility
 	{
-		size_t FileToArrayOfBytes(str_t filepath, char*& pbuffer);
+		size_t FileToArrayOfBytes(std::string filepath, char*& pbuffer);
 		void MultiByteToWideChar(char mbstr[], wchar_t wcbuf[], size_t max_size);
 		void WideCharToMultiByte(wchar_t wcstr[], char mbbuf[], size_t max_size);
 	}
@@ -156,16 +145,16 @@ namespace Framework
 	namespace FunctionManager
 	{
 		template <class type_t>
-		std::unordered_map<str_t, std::function<type_t()>> function_arr;
+		std::unordered_map<std::string, std::function<type_t()>> function_arr;
 		template <class type_t>
-		bool Register(str_t strName, std::function<type_t()> func, bool overwrite = true)
+		bool Register(std::string strName, std::function<type_t()> func, bool overwrite = true)
 		{
 			if (!overwrite && function_arr<type_t>.count(strName) > 0) return false;
-			function_arr<type_t>.insert(std::pair<str_t, std::function<type_t()>>(strName, func));
+			function_arr<type_t>.insert(std::pair<std::string, std::function<type_t()>>(strName, func));
 			return true;
 		}
 		template <class type_t>
-		type_t Call(str_t strName)
+		type_t Call(std::string strName)
 		{
 			if (function_arr<type_t>.count(strName) == 0 || function_arr<type_t>[strName] == BAD_FUNCTION) return (type_t)BAD_RETURN;
 
@@ -193,16 +182,16 @@ namespace Framework
 		namespace Ex
 		{
 #			if defined(WIN)
-			pid_t GetProcessIdByName(str_t processName);
-			pid_t GetProcessIdByWindow(str_t windowName);
-			pid_t GetProcessIdByWindow(str_t windowClass, str_t windowName);
+			pid_t GetProcessIdByName(LPCWSTR processName);
+			pid_t GetProcessIdByWindow(LPCSTR windowName);
+			pid_t GetProcessIdByWindow(LPCSTR windowClass, LPCSTR windowName);
 			HANDLE GetProcessHandle(pid_t pid);
-			mem_t GetModuleAddress(str_t moduleName, pid_t pid);
+			mem_t GetModuleAddress(LPCWSTR moduleName, pid_t pid);
 			mem_t GetPointer(HANDLE hProc, mem_t ptr, std::vector<mem_t> offsets);
 			BOOL WriteBuffer(HANDLE hProc, mem_t address, const void* value, SIZE_T size);
 			BOOL ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T size);
 #			elif defined(LINUX)
-			pid_t GetProcessIdByName(str_t processName);
+			pid_t GetProcessIdByName(std::string processName);
 			void ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
 			void WriteBuffer(pid_t pid, mem_t address, void* value, size_t size);
 			bool IsProcessRunning(pid_t pid);
@@ -227,7 +216,7 @@ namespace Framework
 			}
 #			if defined(WIN)
 			HANDLE GetCurrentProcessHandle();
-			mem_t GetModuleAddress(str_t moduleName);
+			mem_t GetModuleAddress(LPCWSTR moduleName);
 			mem_t GetPointer(mem_t baseAddress, std::vector<mem_t> offsets);
 			bool WriteBuffer(mem_t address, const void* value, SIZE_T size);
 			bool ReadBuffer(mem_t address, void* buffer, SIZE_T size);
@@ -255,7 +244,7 @@ namespace Framework
 #		if defined(WIN)
 		namespace DynamicLinkLib
 		{
-			bool LoadLibA(HANDLE hProc, str_t dllPath);
+			bool LoadLibA(HANDLE hProc, std::string dllPath);
 		}
 #		endif
 	}
