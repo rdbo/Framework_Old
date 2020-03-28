@@ -36,6 +36,7 @@
 #include <map>
 #include <unordered_map>
 #include <functional>
+#include <tchar.h>
 
 #if defined(WIN)
 #include <iostream>
@@ -89,6 +90,10 @@ const byte_t JMP = 0xE9;
 const byte_t MOV_RAX[] = { 0x48, 0xB8 };
 const byte_t JMP_RAX[] = { 0xFF, 0xE0 };
 #endif
+
+typedef TCHAR* tstr_t;
+typedef char* cstr_t;
+typedef std::string str_t;
 
 #define BAD_RETURN 0
 #define BAD_FUNCTION 0
