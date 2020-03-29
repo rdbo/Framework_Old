@@ -101,7 +101,7 @@ const byte_t JMP_RAX[] = { 0xFF, 0xE0 };
 
 typedef TCHAR* tstr_t;
 typedef char* cstr_t;
-typedef std::string str_t;
+typedef std::basic_string<TCHAR> str_t;
 
 #define BAD_RETURN 0
 #define BAD_FUNCTION 0
@@ -195,11 +195,11 @@ namespace Framework
 		namespace Ex
 		{
 #			if defined(WIN)
-			pid_t GetProcessIdByName(tstr_t processName);
-			pid_t GetProcessIdByWindow(cstr_t windowName);
-			pid_t GetProcessIdByWindow(cstr_t windowClass, cstr_t windowName);
+			pid_t GetProcessIdByName(str_t processName);
+			pid_t GetProcessIdByWindow(str_t windowName);
+			pid_t GetProcessIdByWindow(str_t windowClass, str_t windowName);
 			HANDLE GetProcessHandle(pid_t pid);
-			mem_t GetModuleAddress(tstr_t moduleName, pid_t pid);
+			mem_t GetModuleAddress(str_t moduleName, pid_t pid);
 			mem_t GetPointer(HANDLE hProc, mem_t ptr, std::vector<mem_t> offsets);
 			BOOL WriteBuffer(HANDLE hProc, mem_t address, const void* value, SIZE_T size);
 			BOOL ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T size);
@@ -229,7 +229,7 @@ namespace Framework
 			}
 #			if defined(WIN)
 			HANDLE GetCurrentProcessHandle();
-			mem_t GetModuleAddress(tstr_t moduleName);
+			mem_t GetModuleAddress(str_t moduleName);
 			mem_t GetPointer(mem_t baseAddress, std::vector<mem_t> offsets);
 			bool WriteBuffer(mem_t address, const void* value, SIZE_T size);
 			bool ReadBuffer(mem_t address, void* buffer, SIZE_T size);

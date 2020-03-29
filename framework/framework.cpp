@@ -209,7 +209,7 @@ namespace Framework
 		namespace Ex
 		{
 #			if defined(WIN)
-			pid_t GetProcessIdByName(tstr_t processName)
+			pid_t GetProcessIdByName(str_t processName)
 			{
 				pid_t pid = 0;
 				HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -222,7 +222,7 @@ namespace Framework
 					{
 						do
 						{
-							if (!_tcscmp(procEntry.szExeFile, processName))
+							if (!_tcscmp(procEntry.szExeFile, processName.c_str()))
 							{
 								pid = procEntry.th32ProcessID;
 								break;
@@ -234,23 +234,23 @@ namespace Framework
 				CloseHandle(hSnap);
 				return pid;
 			}
-			pid_t GetProcessIdByWindow(cstr_t windowName)
+			pid_t GetProcessIdByWindow(str_t windowName)
 			{
 				pid_t pid;
-				GetWindowThreadProcessId(FindWindowA(NULL, windowName), &pid);
+				GetWindowThreadProcessId(FindWindow(NULL, windowName.c_str()), &pid);
 				return pid;
 			}
-			pid_t GetProcessIdByWindow(cstr_t windowClass, cstr_t windowName)
+			pid_t GetProcessIdByWindow(str_t windowClass, str_t windowName)
 			{
 				pid_t pid;
-				GetWindowThreadProcessId(FindWindowA(windowClass, windowName), &pid);
+				GetWindowThreadProcessId(FindWindow(windowClass.c_str(), windowName.c_str()), &pid);
 				return pid;
 			}
 			HANDLE GetProcessHandle(pid_t pid)
 			{
 				return OpenProcess(PROCESS_ALL_ACCESS, NULL, pid);
 			}
-			mem_t GetModuleAddress(tstr_t moduleName, pid_t pid)
+			mem_t GetModuleAddress(str_t moduleName, pid_t pid)
 			{
 				mem_t moduleAddr = NULL;
 				HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid);
@@ -262,7 +262,7 @@ namespace Framework
 					{
 						do
 						{
-							if (!lstrcmp(modEntry.szModule, moduleName))
+							if (!lstrcmp(modEntry.szModule, moduleName.c_str()))
 							{
 								moduleAddr = (mem_t)modEntry.modBaseAddr;
 								break;
@@ -378,9 +378,9 @@ namespace Framework
 			{
 				return GetCurrentProcess();
 			}
-			mem_t GetModuleAddress(tstr_t moduleName)
+			mem_t GetModuleAddress(str_t moduleName)
 			{
-				return (mem_t)GetModuleHandle(moduleName);
+				return (mem_t)GetModuleHandle(moduleName.c_str());
 			}
 
 			mem_t GetPointer(mem_t baseAddress, std::vector<mem_t> offsets)
@@ -506,7 +506,7 @@ namespace Framework
 			bool LoadLib(HANDLE hProc, str_t dllPath)
 			{
 				void* loc = VirtualAllocEx(hProc, 0, dllPath.size() + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-				WriteProcessMemory(hProc, loc, dllPath.data(), dllPath.size() + 1, 0);
+				WriteProcessMemory(hProc, loc, dllPath.c_str(), dllPath.size() + 1, 0);
 				HANDLE hThread = CreateRemoteThread(hProc, 0, 0, (LPTHREAD_START_ROUTINE)LoadLibrary, loc, 0, 0);
 				return true;
 			}
