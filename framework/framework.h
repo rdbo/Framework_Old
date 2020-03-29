@@ -30,17 +30,23 @@
 #define FRAMEWORK
 #endif
 
+#if defined(_UNICODE)
+#define UCS
+#else
+#define MBCS
+#endif
+
 //Includes / OS specific
 #include <iostream>
 #include <fstream>
 #include <map>
 #include <unordered_map>
 #include <functional>
-#include <tchar.h>
 
 #if defined(WIN)
 #include <iostream>
 #include <vector>
+#include <tchar.h>
 #include <Windows.h>
 #include <TlHelp32.h>
 #if INCLUDE_DIRECTX9
@@ -78,6 +84,7 @@ typedef uintptr_t mem_t;
 #define INVALID_PID -1
 #define MAX_FILENAME 256
 typedef off_t mem_t;
+typedef char TCHAR;
 #endif
 
 typedef unsigned char byte_t;
@@ -92,12 +99,6 @@ const byte_t JMP_RAX[] = { 0xFF, 0xE0 };
 #endif
 
 //Strings
-
-#if defined(_UNICODE)
-#define UCS
-#else
-#define MBCS
-#endif
 
 typedef TCHAR* tstr_t;
 typedef char* cstr_t;

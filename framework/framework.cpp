@@ -1,14 +1,15 @@
-#pragma once
 #include "framework.h"
 
 //Helper Function Definitions
 
+#ifdef WIN
 BOOL CALLBACK EnumWindowsCallback(HWND handle, LPARAM lParam);
+#endif
 
 //Variables
-
+#ifdef WIN
 HWND window;
-
+#endif
 //Framework
 
 #ifdef FRAMEWORK
