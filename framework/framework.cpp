@@ -2,12 +2,12 @@
 
 //Helper Function Definitions
 
-#ifdef WIN
+#ifdef WIN && INCLUDE_API
 BOOL CALLBACK EnumWindowsCallback(HWND handle, LPARAM lParam);
 #endif
 
 //Variables
-#ifdef WIN
+#ifdef WIN && INCLUDE_API
 HWND window;
 #endif
 //Framework
