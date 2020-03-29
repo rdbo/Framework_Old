@@ -277,6 +277,7 @@ namespace Framework
 
 			mem_t GetPointer(HANDLE hProc, mem_t baseAddress, std::vector<mem_t> offsets)
 			{
+				if (hProc == INVALID_HANDLE_VALUE || hProc == 0) return BAD_RETURN;
 				mem_t addr = baseAddress;
 				for (unsigned int i = 0; i < offsets.size(); ++i)
 				{
@@ -287,10 +288,12 @@ namespace Framework
 			}
 			BOOL WriteBuffer(HANDLE hProc, mem_t address, const void* value, SIZE_T size)
 			{
+				if (hProc == INVALID_HANDLE_VALUE || hProc == 0) return BAD_RETURN;
 				return WriteProcessMemory(hProc, (BYTE*)address, value, size, nullptr);
 			}
 			BOOL ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T size)
 			{
+				if (hProc == INVALID_HANDLE_VALUE || hProc == 0) return BAD_RETURN;
 				return ReadProcessMemory(hProc, (BYTE*)address, buffer, size, nullptr);
 			}
 
@@ -506,9 +509,18 @@ namespace Framework
 		{
 			bool LoadLib(HANDLE hProc, str_t dllPath)
 			{
+				if (dllPath.length() == 0 || hProc == INVALID_HANDLE_VALUE || hProc == 0) return false;
+
 				void* loc = VirtualAllocEx(hProc, 0, (dllPath.length() + 1) * sizeof(TCHAR), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-				WriteProcessMemory(hProc, loc, dllPath.c_str(), (dllPath.length() + 1) * sizeof(TCHAR), 0);
+				if (loc == 0) return false;
+
+				if (!WriteProcessMemory(hProc, loc, dllPath.c_str(), (dllPath.length() + 1) * sizeof(TCHAR), 0)) return false;
 				HANDLE hThread = CreateRemoteThread(hProc, 0, 0, (LPTHREAD_START_ROUTINE)LoadLibrary, loc, 0, 0);
+				if (hThread == INVALID_HANDLE_VALUE || hThread == 0) return false;
+				WaitForSingleObject(hThread, -1);
+				CloseHandle(hThread);
+				VirtualFreeEx(hProc, loc, 0, MEM_RELEASE);
+
 				return true;
 			}
 		}
