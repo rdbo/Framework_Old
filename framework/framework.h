@@ -190,8 +190,6 @@ namespace Framework
 #	if INCLUDE_MEMORY
 	namespace Memory
 	{
-		void ZeroMem(void* src, size_t size);
-		bool IsBadPointer(void* pointer);
 
 		namespace Ex
 		{
@@ -214,6 +212,8 @@ namespace Framework
 
 		namespace In
 		{
+			void ZeroMem(void* src, size_t size);
+			bool IsBadPointer(void* pointer);
 			pid_t GetCurrentProcessID();
 			template <class type_t>
 			type_t Read(mem_t address)

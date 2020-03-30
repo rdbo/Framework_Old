@@ -158,7 +158,7 @@ namespace Framework
 
 			size_t size = filestream.tellg();
 			pbuffer = new char(size);
-			Framework::Memory::ZeroMem(pbuffer, size);
+			Framework::Memory::In::ZeroMem(pbuffer, size);
 			filestream.seekg(0, std::ios::beg);
 			filestream.read((char*)pbuffer, size);
 			filestream.close();
@@ -178,35 +178,6 @@ namespace Framework
 #	if INCLUDE_MEMORY
 	namespace Memory
 	{
-		void ZeroMem(void* src, size_t size)
-		{
-			memset(src, 0x0, size + 1);
-		}
-		bool IsBadPointer(void* pointer)
-		{
-#			if defined(WIN)
-			MEMORY_BASIC_INFORMATION mbi = { 0 };
-			if (VirtualQuery(pointer, &mbi, sizeof(mbi)))
-			{
-				DWORD mask = (PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY);
-				bool b = !(mbi.Protect & mask);
-				if (mbi.Protect & (PAGE_GUARD | PAGE_NOACCESS)) b = true;
-
-				return b;
-			}
-#			elif defined(LINUX)
-			int fh = open((const char*)pointer, 0, 0);
-			int e = errno;
-
-			if (fh == -1 && e != EFAULT)
-			{
-				close(fh);
-				return false;
-			}
-#			endif
-			return true;
-		}
-
 		namespace Ex
 		{
 #			if defined(WIN)
@@ -366,6 +337,36 @@ namespace Framework
 
 		namespace In
 		{
+			void ZeroMem(void* src, size_t size)
+			{
+				memset(src, 0x0, size + 1);
+			}
+
+			bool IsBadPointer(void* pointer)
+			{
+#				if defined(WIN)
+				MEMORY_BASIC_INFORMATION mbi = { 0 };
+				if (VirtualQuery(pointer, &mbi, sizeof(mbi)))
+				{
+					DWORD mask = (PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY);
+					bool b = !(mbi.Protect & mask);
+					if (mbi.Protect & (PAGE_GUARD | PAGE_NOACCESS)) b = true;
+
+					return b;
+				}
+#				elif defined(LINUX)
+				int fh = open((const char*)pointer, 0, 0);
+				int e = errno;
+
+				if (fh == -1 && e != EFAULT)
+				{
+					close(fh);
+					return false;
+				}
+#				endif
+				return true;
+			}
+
 			pid_t GetCurrentProcessID()
 			{
 #				if defined(WIN)
